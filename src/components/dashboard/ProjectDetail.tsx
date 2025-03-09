@@ -19,7 +19,7 @@ import {
   Search,
 } from "lucide-react";
 import { ProjectCardProps } from "./ProjectCard";
-import { mockProjects } from "./ProjectsPage";
+import { mockProjects } from "./mockData";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
