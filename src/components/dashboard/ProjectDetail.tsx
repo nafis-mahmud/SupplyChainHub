@@ -19,12 +19,18 @@ import {
   Search,
 } from "lucide-react";
 import { ProjectCardProps } from "./ProjectCard";
-import { mockProjects } from "./ProjectsPage";
+import { mockProjects } from "./mockData";
+import { useLocation } from "react-router-dom";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
+  const location = useLocation();
+  const projectFromState = location.state?.project as
+    | ProjectCardProps
+    | undefined;
+
   const [project, setProject] = useState<ProjectCardProps | undefined>(
-    mockProjects.find((p) => p.id === projectId),
+    projectFromState || mockProjects.find((p) => p.id === projectId),
   );
 
   if (!project) {

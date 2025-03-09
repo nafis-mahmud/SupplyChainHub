@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BarChart3, Database, FileText, GitBranch, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export interface ProjectCardProps {
   id: string;
@@ -28,21 +28,28 @@ export interface ProjectCardProps {
   className?: string;
 }
 
-export function ProjectCard({
-  id,
-  title,
-  description,
-  category,
-  resources,
-  flows,
-  datasets,
-  dashboards,
-  teamMembers,
-  lastUpdated,
-  className,
-}: ProjectCardProps) {
+export function ProjectCard(props: ProjectCardProps) {
+  const {
+    id,
+    title,
+    description,
+    category,
+    resources,
+    flows,
+    datasets,
+    dashboards,
+    teamMembers,
+    lastUpdated,
+    className,
+  } = props;
+  const navigate = useNavigate();
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(`/project/${id}`, { state: { project: props } });
+  };
   return (
-    <Link to={`/project/${id}`} className="block">
+    <Link to={`/project/${id}`} className="block" onClick={handleClick}>
       <Card
         className={cn(
           "overflow-hidden transition-all hover:shadow-md cursor-pointer",
