@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,10 +20,6 @@ import {
 } from "lucide-react";
 import { ProjectCardProps } from "./ProjectCard";
 import { mockProjects } from "./mockData";
-<<<<<<< HEAD
-import { useLocation } from "react-router-dom";
-=======
->>>>>>> f082c8f9597cf0c247dd6782e0bab689ca4ca895
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
