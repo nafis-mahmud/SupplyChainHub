@@ -39,7 +39,11 @@ export function ProjectsPage() {
   }) => {
     // Create a new project with the provided data
     const newProject: ProjectCardProps = {
+<<<<<<< HEAD
       id: `project-${Date.now()}`, // Generate a unique ID
+=======
+      id: `${projects.length + 1}`,
+>>>>>>> f082c8f9597cf0c247dd6782e0bab689ca4ca895
       title: projectData.title,
       description: `This is a new ${projectData.category.toLowerCase()} project.`,
       category: projectData.category,

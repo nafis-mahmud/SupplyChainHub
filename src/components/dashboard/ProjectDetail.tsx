@@ -20,7 +20,10 @@ import {
 } from "lucide-react";
 import { ProjectCardProps } from "./ProjectCard";
 import { mockProjects } from "./mockData";
+<<<<<<< HEAD
 import { useLocation } from "react-router-dom";
+=======
+>>>>>>> f082c8f9597cf0c247dd6782e0bab689ca4ca895
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
