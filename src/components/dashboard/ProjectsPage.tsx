@@ -5,190 +5,18 @@ import { CategoryFolder } from "./CategoryFolder";
 import { ProjectList } from "./ProjectList";
 import { ViewMode } from "./ViewToggle";
 import { ProjectCardProps } from "./ProjectCard";
-
-// Mock data for demonstration
-const categories = [
-  { id: "all", name: "All Projects", count: 12 },
-  { id: "supply-chain", name: "Supply Chain", count: 5 },
-  { id: "inventory", name: "Inventory", count: 3 },
-  { id: "logistics", name: "Logistics", count: 2 },
-  { id: "procurement", name: "Procurement", count: 2 },
-];
-
-export const mockProjects: ProjectCardProps[] = [
-  {
-    id: "1",
-    title: "Global Supply Chain Optimization",
-    description:
-      "Optimize the global supply chain network to reduce costs and improve delivery times.",
-    category: "Supply Chain",
-    resources: 12,
-    flows: 8,
-    datasets: 5,
-    dashboards: 3,
-    teamMembers: [
-      {
-        id: "1",
-        name: "John Doe",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
-      },
-      {
-        id: "2",
-        name: "Jane Smith",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jane",
-      },
-      {
-        id: "3",
-        name: "Bob Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=bob",
-      },
-      {
-        id: "4",
-        name: "Alice Brown",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alice",
-      },
-    ],
-    lastUpdated: "2 days ago",
-  },
-  {
-    id: "2",
-    title: "Warehouse Inventory Management",
-    description:
-      "Track and manage inventory levels across multiple warehouse locations.",
-    category: "Inventory",
-    resources: 8,
-    flows: 5,
-    datasets: 3,
-    dashboards: 2,
-    teamMembers: [
-      {
-        id: "2",
-        name: "Jane Smith",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jane",
-      },
-      {
-        id: "5",
-        name: "Mike Wilson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      },
-    ],
-    lastUpdated: "1 week ago",
-  },
-  {
-    id: "3",
-    title: "Logistics Route Optimization",
-    description:
-      "Optimize delivery routes to minimize fuel consumption and delivery times.",
-    category: "Logistics",
-    resources: 6,
-    flows: 4,
-    datasets: 2,
-    dashboards: 1,
-    teamMembers: [
-      {
-        id: "1",
-        name: "John Doe",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
-      },
-      {
-        id: "3",
-        name: "Bob Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=bob",
-      },
-      {
-        id: "6",
-        name: "Sarah Lee",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      },
-    ],
-    lastUpdated: "3 days ago",
-  },
-  {
-    id: "4",
-    title: "Procurement Analytics",
-    description:
-      "Analyze procurement data to identify cost-saving opportunities and optimize vendor selection.",
-    category: "Procurement",
-    resources: 10,
-    flows: 6,
-    datasets: 4,
-    dashboards: 2,
-    teamMembers: [
-      {
-        id: "4",
-        name: "Alice Brown",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alice",
-      },
-      {
-        id: "5",
-        name: "Mike Wilson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      },
-    ],
-    lastUpdated: "5 days ago",
-  },
-  {
-    id: "5",
-    title: "Inventory Forecasting",
-    description:
-      "Forecast inventory needs based on historical data and seasonal trends.",
-    category: "Inventory",
-    resources: 7,
-    flows: 3,
-    datasets: 5,
-    dashboards: 2,
-    teamMembers: [
-      {
-        id: "2",
-        name: "Jane Smith",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jane",
-      },
-      {
-        id: "6",
-        name: "Sarah Lee",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      },
-    ],
-    lastUpdated: "2 weeks ago",
-  },
-  {
-    id: "6",
-    title: "Supplier Performance Dashboard",
-    description:
-      "Monitor and evaluate supplier performance metrics in real-time.",
-    category: "Supply Chain",
-    resources: 9,
-    flows: 4,
-    datasets: 6,
-    dashboards: 3,
-    teamMembers: [
-      {
-        id: "1",
-        name: "John Doe",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
-      },
-      {
-        id: "3",
-        name: "Bob Johnson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=bob",
-      },
-      {
-        id: "5",
-        name: "Mike Wilson",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      },
-    ],
-    lastUpdated: "1 day ago",
-  },
-];
+import { CreateProjectDialog } from "./CreateProjectDialog";
+import { categories, mockProjects } from "./mockData";
 
 export function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [projects, setProjects] = useState<ProjectCardProps[]>(mockProjects);
 
   // Filter projects based on search query and selected category
-  const filteredProjects = mockProjects.filter((project) => {
+  const filteredProjects = projects.filter((project) => {
     const matchesSearch =
       project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -202,8 +30,55 @@ export function ProjectsPage() {
   });
 
   const handleCreateProject = () => {
-    // This would open a modal or navigate to a create project page
-    console.log("Create new project");
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleProjectCreation = (projectData: {
+    title: string;
+    category: string;
+  }) => {
+    // Create a new project with the provided data
+    const newProject: ProjectCardProps = {
+      id: `${projects.length + 1}`,
+      title: projectData.title,
+      description: `This is a new ${projectData.category.toLowerCase()} project.`,
+      category: projectData.category,
+      resources: 0,
+      flows: 0,
+      datasets: 0,
+      dashboards: 0,
+      teamMembers: [
+        {
+          id: "1",
+          name: "John Doe",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
+        },
+      ],
+      lastUpdated: "Just now",
+    };
+
+    // Add the new project to the projects array
+    setProjects([newProject, ...projects]);
+
+    // Update the category count
+    const categoryId = categories.find(
+      (c) => c.name === projectData.category,
+    )?.id;
+    if (categoryId && categoryId !== "all") {
+      const categoryIndex = categories.findIndex((c) => c.id === categoryId);
+      if (categoryIndex !== -1) {
+        categories[categoryIndex].count += 1;
+        categories[0].count += 1; // Update 'All Projects' count
+      }
+    }
+
+    // Select the category of the new project
+    const newCategoryId = categories.find(
+      (c) => c.name === projectData.category,
+    )?.id;
+    if (newCategoryId) {
+      setSelectedCategory(newCategoryId);
+    }
   };
 
   return (
@@ -256,6 +131,13 @@ export function ProjectsPage() {
           </div>
         </div>
       </div>
+
+      <CreateProjectDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onCreateProject={handleProjectCreation}
+        categories={categories}
+      />
     </div>
   );
 }
