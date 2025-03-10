@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +34,13 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      // For demo purposes, simulate successful signup
+      setTimeout(() => {
+        setSuccess(true);
+      }, 1000);
+
+      // In a real app, you would use Supabase auth
+      /*
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -42,7 +50,7 @@ export default function SignupPage() {
       });
 
       if (error) throw error;
-      setSuccess(true);
+      */
     } catch (err: any) {
       setError(err.message || "Failed to sign up");
     } finally {
@@ -56,11 +64,11 @@ export default function SignupPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-2xl font-bold">
-              Check your email
+              Account created successfully
             </CardTitle>
             <CardDescription>
-              We've sent you a confirmation link. Please check your email to
-              complete your registration.
+              Your account has been created. In a real app, we would send you a
+              confirmation email.
             </CardDescription>
           </CardHeader>
           <CardFooter>
@@ -121,6 +129,9 @@ export default function SignupPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Create account"}
             </Button>
+            <div className="mt-2 text-center text-xs text-muted-foreground">
+              <p>For demo purposes, any valid email/password will work</p>
+            </div>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">

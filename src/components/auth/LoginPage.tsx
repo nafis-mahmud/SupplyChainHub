@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("demo@example.com");
+  const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,13 +25,29 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // For demo purposes, allow direct login with demo credentials
+      if (email === "demo@example.com" && password === "password123") {
+        // Simulate successful login
+        setTimeout(() => {
+          // Set login state in localStorage
+          localStorage.setItem("isLoggedIn", "true");
+          localStorage.setItem("userEmail", email);
+          navigate("/");
+        }, 1000);
+        return;
+      }
 
-      if (error) throw error;
-      // Redirect will happen automatically via Supabase auth state change
+      // For demo purposes, any email with valid format and password length >= 6 will work
+      if (password.length >= 6) {
+        setTimeout(() => {
+          // Set login state in localStorage
+          localStorage.setItem("isLoggedIn", "true");
+          localStorage.setItem("userEmail", email);
+          navigate("/");
+        }, 1000);
+      } else {
+        throw new Error("Password must be at least 6 characters");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to sign in");
     } finally {
@@ -83,6 +99,10 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
+            <div className="mt-2 text-center text-xs text-muted-foreground">
+              <p>Demo credentials are pre-filled for you</p>
+              <p>Email: demo@example.com / Password: password123</p>
+            </div>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">

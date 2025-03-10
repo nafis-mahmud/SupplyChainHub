@@ -25,12 +25,19 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      // For demo purposes, simulate successful password reset request
+      setTimeout(() => {
+        setSuccess(true);
+      }, 1000);
+
+      // In a real app, you would use Supabase auth
+      /*
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) throw error;
-      setSuccess(true);
+      */
     } catch (err: any) {
       setError(err.message || "Failed to send reset email");
     } finally {
@@ -88,6 +95,9 @@ export default function ForgotPasswordPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Sending reset link..." : "Send reset link"}
             </Button>
+            <div className="mt-2 text-center text-xs text-muted-foreground">
+              <p>For demo purposes, any valid email will work</p>
+            </div>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">

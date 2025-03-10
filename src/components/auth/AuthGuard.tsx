@@ -1,6 +1,5 @@
 import { useEffect, useState, ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -12,29 +11,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setAuthenticated(!!data.session);
-      } catch (error) {
-        setAuthenticated(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setAuthenticated(!!session);
-        setLoading(false);
-      },
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
+    // For demo purposes, we're using localStorage instead of Supabase
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    setAuthenticated(isLoggedIn);
+    setLoading(false);
   }, []);
 
   if (loading) {

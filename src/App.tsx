@@ -1,5 +1,12 @@
-import { Suspense, lazy } from "react";
-import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import {
+  useRoutes,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import Home from "./components/home";
 import routes from "tempo-routes";
 import { ProjectDetail } from "./components/dashboard/ProjectDetail";
@@ -15,23 +22,92 @@ const ResetPasswordPage = lazy(
   () => import("./components/auth/ResetPasswordPage"),
 );
 
+// Auth wrapper to redirect authenticated users away from auth pages
+function AuthRedirect({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if user is logged in (using localStorage in this demo)
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+    if (isLoggedIn) {
+      // If user is logged in and trying to access auth pages, redirect to home
+      navigate("/", { replace: true });
+    }
+  }, [navigate, location]);
+
+  return <>{children}</>;
+}
+
+// Root component to redirect to login if not authenticated
+function Root() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is logged in (using localStorage in this demo)
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+    if (!isLoggedIn) {
+      // If not logged in, redirect to login
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
+
+  return <Home />;
+}
+
 function App() {
   return (
-    <Suspense fallback={<p>Loading...</p>}>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        </div>
+      }
+    >
       <>
         <Routes>
-          {/* Auth routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Auth routes - wrapped with AuthRedirect to prevent access when logged in */}
+          <Route
+            path="/login"
+            element={
+              <AuthRedirect>
+                <LoginPage />
+              </AuthRedirect>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <AuthRedirect>
+                <SignupPage />
+              </AuthRedirect>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <AuthRedirect>
+                <ForgotPasswordPage />
+              </AuthRedirect>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <AuthRedirect>
+                <ResetPasswordPage />
+              </AuthRedirect>
+            }
+          />
 
           {/* Protected routes */}
           <Route
             path="/"
             element={
               <AuthGuard>
-                <Home />
+                <Root />
               </AuthGuard>
             }
           />
