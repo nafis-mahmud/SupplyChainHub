@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,18 @@ import {
   FileText,
   Plus,
   Search,
+  Loader2,
 } from "lucide-react";
 import { ProjectCardProps } from "./ProjectCard";
-import { mockProjects } from "./mockData";
+import { getProjectById } from "@/lib/projectService";
+import {
+  Dataset,
+  getProjectDatasets,
+  createDataset,
+  deleteDataset,
+} from "@/lib/datasetService";
+import { CreateDatasetDialog } from "./CreateDatasetDialog";
+import { DatasetItem } from "./DatasetItem";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -29,16 +38,125 @@ export function ProjectDetail() {
     | undefined;
 
   const [project, setProject] = useState<ProjectCardProps | undefined>(
-    projectFromState || mockProjects.find((p) => p.id === projectId),
+    projectFromState,
   );
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [loading, setLoading] = useState(!projectFromState);
+  const [datasetsLoading, setDatasetsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isCreateDatasetDialogOpen, setIsCreateDatasetDialogOpen] =
+    useState(false);
 
-  if (!project) {
+  useEffect(() => {
+    // If we don't have the project from state, fetch it from Supabase
+    if (!projectFromState && projectId) {
+      const fetchProject = async () => {
+        try {
+          setLoading(true);
+          const projectData = await getProjectById(projectId);
+          if (projectData) {
+            setProject(projectData);
+          } else {
+            setError("Project not found");
+          }
+        } catch (err) {
+          console.error("Error fetching project:", err);
+          setError("Failed to load project details");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchProject();
+    }
+  }, [projectId, projectFromState]);
+
+  // Fetch datasets for the project
+  useEffect(() => {
+    if (projectId) {
+      const fetchDatasets = async () => {
+        try {
+          setDatasetsLoading(true);
+          const datasetsData = await getProjectDatasets(projectId);
+          setDatasets(datasetsData);
+        } catch (err) {
+          console.error("Error fetching datasets:", err);
+        } finally {
+          setDatasetsLoading(false);
+        }
+      };
+
+      fetchDatasets();
+    }
+  }, [projectId]);
+
+  const handleCreateDataset = async (data: {
+    name: string;
+    description: string;
+  }) => {
+    if (!projectId) return;
+
+    try {
+      const newDataset = await createDataset({
+        ...data,
+        project_id: projectId,
+      });
+
+      if (newDataset) {
+        setDatasets([newDataset, ...datasets]);
+
+        // Update project datasets count
+        if (project) {
+          setProject({
+            ...project,
+            datasets: (project.datasets || 0) + 1,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error creating dataset:", err);
+    }
+  };
+
+  const handleDeleteDataset = async (datasetId: string) => {
+    try {
+      const success = await deleteDataset(datasetId);
+      if (success) {
+        setDatasets(datasets.filter((d) => d.id !== datasetId));
+
+        // Update project datasets count
+        if (project && project.datasets > 0) {
+          setProject({
+            ...project,
+            datasets: project.datasets - 1,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting dataset:", err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">
+            Loading project details...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Project not found</h2>
           <p className="mt-2 text-muted-foreground">
-            The project you're looking for doesn't exist.
+            {error || "The project you're looking for doesn't exist."}
           </p>
           <Button asChild className="mt-4">
             <Link to="/">Back to Dashboard</Link>
@@ -121,51 +239,40 @@ export function ProjectDetail() {
                 <div className="mt-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium">Datasets</h4>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={() => setIsCreateDatasetDialogOpen(true)}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
 
                   <div className="mt-2 space-y-2">
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-                          <Database className="h-3 w-3 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium">
-                            Amazon_table_chart
-                          </p>
-                          <p className="text-xs text-muted-foreground">CSV</p>
-                        </div>
+                    {datasets.length > 0 ? (
+                      datasets.map((dataset) => (
+                        <DatasetItem
+                          key={dataset.id}
+                          dataset={dataset}
+                          onDelete={handleDeleteDataset}
+                        />
+                      ))
+                    ) : (
+                      <div className="rounded-md border border-dashed p-4 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          No datasets added yet
+                        </p>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="mt-1 h-auto p-0 text-xs"
+                          onClick={() => setIsCreateDatasetDialogOpen(true)}
+                        >
+                          Add your first dataset
+                        </Button>
                       </div>
-                    </div>
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-                          <Database className="h-3 w-3 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium">
-                            SKU_Map_table_chart
-                          </p>
-                          <p className="text-xs text-muted-foreground">CSV</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-                          <Database className="h-3 w-3 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium">
-                            Inventory_Across_Channels_table_chart
-                          </p>
-                          <p className="text-xs text-muted-foreground">XLS</p>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -313,6 +420,13 @@ export function ProjectDetail() {
           </div>
         </div>
       </div>
+
+      <CreateDatasetDialog
+        open={isCreateDatasetDialogOpen}
+        onOpenChange={setIsCreateDatasetDialogOpen}
+        onCreateDataset={handleCreateDataset}
+        projectId={projectId || ""}
+      />
     </div>
   );
 }

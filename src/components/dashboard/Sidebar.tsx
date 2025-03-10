@@ -9,6 +9,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { LogoutButton } from "./LogoutButton";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -35,13 +36,20 @@ const SidebarItem = ({ icon, label, href, active }: SidebarItemProps) => {
 export function Sidebar() {
   const location = useLocation();
   const pathname = location.pathname;
+  const userEmail = localStorage.getItem("userEmail") || "User";
 
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-white">
-      <div className="flex h-14 items-center border-b border-slate-800 px-4">
+      <div className="flex h-14 items-center justify-between border-b border-slate-800 px-4">
         <h2 className="text-lg font-semibold">Supply Chain Hub</h2>
       </div>
       <div className="flex-1 overflow-auto py-4">
+        <div className="mb-6 px-4">
+          <div className="rounded-lg bg-slate-800 p-3">
+            <p className="text-xs text-slate-400">Logged in as</p>
+            <p className="truncate text-sm font-medium">{userEmail}</p>
+          </div>
+        </div>
         <nav className="grid gap-1 px-2">
           <SidebarItem
             icon={<Home className="h-4 w-4" />}
@@ -86,6 +94,9 @@ export function Sidebar() {
             active={pathname.startsWith("/settings")}
           />
         </nav>
+      </div>
+      <div className="border-t border-slate-800 p-4">
+        <LogoutButton />
       </div>
     </div>
   );

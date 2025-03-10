@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { CategoryFolder } from "./CategoryFolder";
@@ -6,14 +6,56 @@ import { ProjectList } from "./ProjectList";
 import { ViewMode } from "./ViewToggle";
 import { ProjectCardProps } from "./ProjectCard";
 import { CreateProjectDialog } from "./CreateProjectDialog";
-import { categories, mockProjects } from "./mockData";
+import { categories } from "./mockData";
+import { getUserProjects, createProject } from "@/lib/projectService";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [projects, setProjects] = useState<ProjectCardProps[]>(mockProjects);
+  const [projects, setProjects] = useState<ProjectCardProps[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch projects from Supabase on component mount
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        setLoading(true);
+        const projectsData = await getUserProjects();
+        console.log("Fetched projects:", projectsData);
+        setProjects(projectsData);
+
+        // Update category counts based on fetched projects
+        updateCategoryCounts(projectsData);
+      } catch (err) {
+        console.error("Error fetching projects:", err);
+        setError("Failed to load projects. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchProjects();
+  }, []);
+
+  // Update category counts based on projects
+  const updateCategoryCounts = (projectsData: ProjectCardProps[]) => {
+    // Reset all counts
+    categories.forEach((category) => {
+      if (category.id === "all") {
+        category.count = projectsData.length;
+      } else {
+        category.count = projectsData.filter(
+          (project) =>
+            project.category.toLowerCase() === category.name.toLowerCase(),
+        ).length;
+      }
+    });
+  };
 
   // Filter projects based on search query and selected category
   const filteredProjects = projects.filter((project) => {
@@ -33,51 +75,57 @@ export function ProjectsPage() {
     setIsCreateDialogOpen(true);
   };
 
-  const handleProjectCreation = (projectData: {
+  const handleProjectCreation = async (projectData: {
     title: string;
     category: string;
   }) => {
-    // Create a new project with the provided data
-    const newProject: ProjectCardProps = {
-      id: `project-${Date.now()}`, // Generate a unique ID
-      title: projectData.title,
-      description: `This is a new ${projectData.category.toLowerCase()} project.`,
-      category: projectData.category,
-      resources: 0,
-      flows: 0,
-      datasets: 0,
-      dashboards: 0,
-      teamMembers: [
-        {
-          id: "1",
-          name: "John Doe",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
-        },
-      ],
-      lastUpdated: "Just now",
-    };
+    try {
+      setLoading(true);
+      console.log("Creating project:", projectData);
 
-    // Add the new project to the projects array
-    setProjects([newProject, ...projects]);
+      // Create project in Supabase
+      const newProject = await createProject({
+        title: projectData.title,
+        category: projectData.category,
+        description: `This is a new ${projectData.category.toLowerCase()} project.`,
+      });
 
-    // Update the category count
-    const categoryId = categories.find(
-      (c) => c.name === projectData.category,
-    )?.id;
-    if (categoryId && categoryId !== "all") {
-      const categoryIndex = categories.findIndex((c) => c.id === categoryId);
-      if (categoryIndex !== -1) {
-        categories[categoryIndex].count += 1;
-        categories[0].count += 1; // Update 'All Projects' count
+      console.log("Created project:", newProject);
+
+      if (newProject) {
+        // Add the new project to the projects array
+        setProjects([newProject, ...projects]);
+
+        // Update the category count
+        const categoryId = categories.find(
+          (c) => c.name === projectData.category,
+        )?.id;
+        if (categoryId && categoryId !== "all") {
+          const categoryIndex = categories.findIndex(
+            (c) => c.id === categoryId,
+          );
+          if (categoryIndex !== -1) {
+            categories[categoryIndex].count += 1;
+            categories[0].count += 1; // Update 'All Projects' count
+          }
+        }
+
+        // Select the category of the new project
+        const newCategoryId = categories.find(
+          (c) => c.name === projectData.category,
+        )?.id;
+        if (newCategoryId) {
+          setSelectedCategory(newCategoryId);
+        }
+      } else {
+        // If project creation failed, show error
+        setError("Failed to create project. Please try again.");
       }
-    }
-
-    // Select the category of the new project
-    const newCategoryId = categories.find(
-      (c) => c.name === projectData.category,
-    )?.id;
-    if (newCategoryId) {
-      setSelectedCategory(newCategoryId);
+    } catch (err) {
+      console.error("Error creating project:", err);
+      setError("Failed to create project. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,6 +143,20 @@ export function ProjectsPage() {
             onViewModeChange={setViewMode}
             onCreateProject={handleCreateProject}
           />
+
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 p-4 text-red-600">
+              <p>{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
 
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-4">
             <div className="space-y-3">
@@ -120,7 +182,11 @@ export function ProjectsPage() {
                 </span>
               </h2>
 
-              {filteredProjects.length > 0 ? (
+              {loading ? (
+                <div className="flex h-40 items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : filteredProjects.length > 0 ? (
                 <ProjectList projects={filteredProjects} viewMode={viewMode} />
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
