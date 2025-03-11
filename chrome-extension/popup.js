@@ -1,5 +1,13 @@
 document.addEventListener("DOMContentLoaded", function () {
   // DOM elements
+  const loginSection = document.getElementById("loginSection");
+  const mainSection = document.getElementById("mainSection");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const loginStatusDiv = document.getElementById("loginStatus");
+  
   const apiUrlInput = document.getElementById("apiUrl");
   const projectSelect = document.getElementById("projectSelect");
   const refreshProjectsBtn = document.getElementById("refreshProjects");
@@ -13,15 +21,98 @@ document.addEventListener("DOMContentLoaded", function () {
   const saveBtn = document.getElementById("saveBtn");
   const statusDiv = document.getElementById("status");
 
-  // Load saved API URL
-  chrome.storage.local.get(["apiUrl"], function (result) {
-    if (result.apiUrl) {
-      apiUrlInput.value = result.apiUrl;
-      loadProjects();
+  // Check if user is logged in
+  chrome.storage.local.get(["isLoggedIn", "userEmail", "apiUrl"], function (result) {
+    if (result.isLoggedIn) {
+      // User is logged in, show main section
+      loginSection.style.display = "none";
+      mainSection.style.display = "block";
+      
+      // Set API URL if available
+      if (result.apiUrl) {
+        apiUrlInput.value = result.apiUrl;
+        loadProjects();
+      }
     }
   });
 
   // Event listeners
+  loginBtn.addEventListener("click", function() {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    
+    if (!email || !password) {
+      updateLoginStatus("Please enter email and password", "error");
+      return;
+    }
+    
+    // Show loading state
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Logging in...";
+    updateLoginStatus("", "");
+    
+    // Call your web app's login API
+    fetch("https://wyivyeysreruaqqbksjp.supabase.co/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5aXZ5ZXlzcmVydWFxcWJrc2pwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1NTA3MjgsImV4cCI6MjA1NzEyNjcyOH0.5pDKb5NmDhUachX9wkcdgZ2cT3WY4jbSt9l-6064vQk"
+      },
+      body: JSON.stringify({
+        email: email,
+        password: password
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Login failed");
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Save login state and token
+      chrome.storage.local.set({
+        isLoggedIn: true,
+        userEmail: email,
+        authToken: data.access_token,
+        apiUrl: "https://wyivyeysreruaqqbksjp.supabase.co/functions/v1/api-projects-direct"
+      });
+      
+      // Show main section
+      loginSection.style.display = "none";
+      mainSection.style.display = "block";
+      
+      // Set API URL and load projects
+      apiUrlInput.value = "https://wyivyeysreruaqqbksjp.supabase.co/functions/v1/api-projects-direct";
+      loadProjects();
+    })
+    .catch(error => {
+      console.error("Login error:", error);
+      updateLoginStatus("Login failed. Please check your credentials.", "error");
+    })
+    .finally(() => {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+    });
+  });
+  
+  logoutBtn.addEventListener("click", function() {
+    // Clear login state
+    chrome.storage.local.remove(["isLoggedIn", "userEmail", "authToken"]);
+    
+    // Show login section
+    mainSection.style.display = "none";
+    loginSection.style.display = "block";
+    
+    // Clear form fields
+    emailInput.value = "";
+    passwordInput.value = "";
+    projectSelect.innerHTML = '<option value="">Select a project</option>';
+    scriptNameInput.value = "";
+    scriptDescriptionInput.value = "";
+    scriptContentTextarea.value = "";
+  });
+  
   apiUrlInput.addEventListener("blur", function () {
     chrome.storage.local.set({ apiUrl: apiUrlInput.value });
   });
@@ -89,27 +180,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateStatus("Loading projects...", "info");
 
-    fetch(`${apiUrl}/api/projects`)
-      .then((response) => {
-        if (!response.ok) throw new Error("Failed to fetch projects");
-        return response.json();
-      })
-      .then((data) => {
-        projectSelect.innerHTML = '<option value="">Select a project</option>';
+    // Get auth token if available
+    chrome.storage.local.get(["authToken"], function(result) {
+      const headers = {
+        "Content-Type": "application/json"
+      };
+      
+      if (result.authToken) {
+        headers["Authorization"] = `Bearer ${result.authToken}`;
+      }
 
-        data.forEach((project) => {
-          const option = document.createElement("option");
-          option.value = project.id;
-          option.textContent = project.title;
-          projectSelect.appendChild(option);
+      fetch(apiUrl)
+        .then((response) => {
+          if (!response.ok) throw new Error("Failed to fetch projects");
+          return response.json();
+        })
+        .then((data) => {
+          projectSelect.innerHTML = '<option value="">Select a project</option>';
+
+          data.forEach((project) => {
+            const option = document.createElement("option");
+            option.value = project.id;
+            option.textContent = project.title;
+            projectSelect.appendChild(option);
+          });
+
+          updateStatus("Projects loaded", "success");
+        })
+        .catch((error) => {
+          console.error("Error loading projects:", error);
+          updateStatus("Failed to load projects", "error");
         });
-
-        updateStatus("Projects loaded", "success");
-      })
-      .catch((error) => {
-        console.error("Error loading projects:", error);
-        updateStatus("Failed to load projects", "error");
-      });
+    });
   }
 
   function validateForm() {
@@ -152,6 +254,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 3000);
   }
 
+  function updateLoginStatus(message, type) {
+    loginStatusDiv.textContent = message;
+    loginStatusDiv.className = "status " + (type || "");
+  }
+
   function saveScript() {
     if (!validateForm()) return;
 
@@ -160,7 +267,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    const apiUrl = apiUrlInput.value;
+    const apiUrl = apiUrlInput.value.replace('api-projects-direct', 'api-selenium-scripts-direct');
     const projectId = projectSelect.value;
     const scriptName = scriptNameInput.value;
     const scriptDescription = scriptDescriptionInput.value;
@@ -168,18 +275,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
     updateStatus("Saving script...", "info");
 
-    fetch(`${apiUrl}/api/selenium-scripts`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: scriptName,
-        description: scriptDescription,
-        script_content: scriptContent,
-        project_id: projectId,
-      }),
-    })
+    // Get auth token if available
+    chrome.storage.local.get(["authToken"], function(result) {
+      const headers = {
+        "Content-Type": "application/json"
+      };
+      
+      if (result.authToken) {
+        headers["Authorization"] = `Bearer ${result.authToken}`;
+      }
+
+      fetch(apiUrl, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({
+          name: scriptName,
+          description: scriptDescription,
+          script_content: scriptContent,
+          project_id: projectId,
+        }),
+      })
       .then((response) => {
         if (!response.ok) throw new Error("Failed to save script");
         return response.json();

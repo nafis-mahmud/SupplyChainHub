@@ -10,49 +10,69 @@
     <div class="container">
       <h1>Selenium Recorder</h1>
 
-      <div class="form-group">
-        <label for="apiUrl">API URL:</label>
-        <input type="text" id="apiUrl" placeholder="https://your-api-url.com" />
+      <div id="loginSection">
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" placeholder="your@email.com" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" id="password" />
+        </div>
+        <button id="loginBtn" class="primary full-width">Login</button>
+        <div id="loginStatus" class="status"></div>
       </div>
 
-      <div class="form-group">
-        <label for="projectSelect">Project:</label>
-        <select id="projectSelect">
-          <option value="">Select a project</option>
-        </select>
-        <button id="refreshProjects" class="icon-button">🔄</button>
-      </div>
+      <div id="mainSection" style="display: none">
+        <div class="form-group">
+          <label for="apiUrl">API URL:</label>
+          <input
+            type="text"
+            id="apiUrl"
+            placeholder="https://your-api-url.com"
+          />
+        </div>
 
-      <div class="form-group">
-        <label for="scriptName">Script Name:</label>
-        <input type="text" id="scriptName" placeholder="My Selenium Script" />
-      </div>
+        <div class="form-group">
+          <label for="projectSelect">Project:</label>
+          <select id="projectSelect">
+            <option value="">Select a project</option>
+          </select>
+          <button id="refreshProjects" class="icon-button">🔄</button>
+        </div>
 
-      <div class="form-group">
-        <label for="scriptDescription">Description:</label>
-        <textarea
-          id="scriptDescription"
-          placeholder="Script description"
-        ></textarea>
-      </div>
+        <div class="form-group">
+          <label for="scriptName">Script Name:</label>
+          <input type="text" id="scriptName" placeholder="My Selenium Script" />
+        </div>
 
-      <div class="controls">
-        <button id="startBtn" class="primary">Start Recording</button>
-        <button id="pauseBtn" disabled>Pause</button>
-        <button id="stopBtn" disabled>Stop</button>
-      </div>
+        <div class="form-group">
+          <label for="scriptDescription">Description:</label>
+          <textarea
+            id="scriptDescription"
+            placeholder="Script description"
+          ></textarea>
+        </div>
 
-      <div class="script-container">
-        <label for="scriptContent">Generated Script:</label>
-        <textarea id="scriptContent" readonly></textarea>
-      </div>
+        <div class="controls">
+          <button id="startBtn" class="primary">Start Recording</button>
+          <button id="pauseBtn" disabled>Pause</button>
+          <button id="stopBtn" disabled>Stop</button>
+        </div>
 
-      <div class="actions">
-        <button id="copyBtn">Copy</button>
-        <button id="saveBtn" class="primary">Save to Project</button>
-      </div>
+        <div class="script-container">
+          <label for="scriptContent">Generated Script:</label>
+          <textarea id="scriptContent" readonly></textarea>
+        </div>
 
-      <div id="status" class="status"></div>
+        <div class="actions">
+          <button id="copyBtn">Copy</button>
+          <button id="saveBtn" class="primary">Save to Project</button>
+        </div>
+
+        <div id="status" class="status"></div>
+        <button id="logoutBtn" class="secondary full-width">Logout</button>
+      </div>
     </div>
 
     <script src="popup.js"></script>

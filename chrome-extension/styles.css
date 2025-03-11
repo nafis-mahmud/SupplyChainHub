@@ -88,6 +88,21 @@ button.primary:hover {
   background-color: #1d4ed8;
 }
 
+button.secondary {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+button.secondary:hover {
+  background-color: #e5e7eb;
+}
+
+button.full-width {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .script-container {
   margin-top: 8px;
 }
