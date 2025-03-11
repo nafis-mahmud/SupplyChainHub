@@ -18,6 +18,7 @@ import {
   Plus,
   Search,
   Loader2,
+  Code,
 } from "lucide-react";
 import { ProjectCardProps } from "./ProjectCard";
 import { getProjectById } from "@/lib/projectService";
@@ -27,8 +28,16 @@ import {
   createDataset,
   deleteDataset,
 } from "@/lib/datasetService";
+import {
+  SeleniumScript,
+  getProjectSeleniumScripts,
+  createSeleniumScript,
+  deleteSeleniumScript,
+} from "@/lib/seleniumScriptService";
 import { CreateDatasetDialog } from "./CreateDatasetDialog";
+import { CreateSeleniumScriptDialog } from "./CreateSeleniumScriptDialog";
 import { DatasetItem } from "./DatasetItem";
+import { SeleniumScriptItem } from "./SeleniumScriptItem";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -41,10 +50,14 @@ export function ProjectDetail() {
     projectFromState,
   );
   const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [seleniumScripts, setSeleniumScripts] = useState<SeleniumScript[]>([]);
   const [loading, setLoading] = useState(!projectFromState);
   const [datasetsLoading, setDatasetsLoading] = useState(true);
+  const [scriptsLoading, setScriptsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDatasetDialogOpen, setIsCreateDatasetDialogOpen] =
+    useState(false);
+  const [isCreateScriptDialogOpen, setIsCreateScriptDialogOpen] =
     useState(false);
 
   useEffect(() => {
@@ -90,6 +103,25 @@ export function ProjectDetail() {
     }
   }, [projectId]);
 
+  // Fetch selenium scripts for the project
+  useEffect(() => {
+    if (projectId) {
+      const fetchSeleniumScripts = async () => {
+        try {
+          setScriptsLoading(true);
+          const scriptsData = await getProjectSeleniumScripts(projectId);
+          setSeleniumScripts(scriptsData);
+        } catch (err) {
+          console.error("Error fetching selenium scripts:", err);
+        } finally {
+          setScriptsLoading(false);
+        }
+      };
+
+      fetchSeleniumScripts();
+    }
+  }, [projectId]);
+
   const handleCreateDataset = async (data: {
     name: string;
     description: string;
@@ -118,6 +150,27 @@ export function ProjectDetail() {
     }
   };
 
+  const handleCreateSeleniumScript = async (data: {
+    name: string;
+    description: string;
+    script_content: string;
+  }) => {
+    if (!projectId) return;
+
+    try {
+      const newScript = await createSeleniumScript({
+        ...data,
+        project_id: projectId,
+      });
+
+      if (newScript) {
+        setSeleniumScripts([newScript, ...seleniumScripts]);
+      }
+    } catch (err) {
+      console.error("Error creating selenium script:", err);
+    }
+  };
+
   // Refresh datasets after update
   const refreshDatasets = async () => {
     if (!projectId) return;
@@ -130,6 +183,21 @@ export function ProjectDetail() {
       console.error("Error refreshing datasets:", err);
     } finally {
       setDatasetsLoading(false);
+    }
+  };
+
+  // Refresh selenium scripts after update
+  const refreshSeleniumScripts = async () => {
+    if (!projectId) return;
+
+    try {
+      setScriptsLoading(true);
+      const scriptsData = await getProjectSeleniumScripts(projectId);
+      setSeleniumScripts(scriptsData);
+    } catch (err) {
+      console.error("Error refreshing selenium scripts:", err);
+    } finally {
+      setScriptsLoading(false);
     }
   };
 
@@ -149,6 +217,17 @@ export function ProjectDetail() {
       }
     } catch (err) {
       console.error("Error deleting dataset:", err);
+    }
+  };
+
+  const handleDeleteSeleniumScript = async (scriptId: string) => {
+    try {
+      const success = await deleteSeleniumScript(scriptId);
+      if (success) {
+        setSeleniumScripts(seleniumScripts.filter((s) => s.id !== scriptId));
+      }
+    } catch (err) {
+      console.error("Error deleting selenium script:", err);
     }
   };
 
@@ -293,43 +372,41 @@ export function ProjectDetail() {
 
                 <div className="mt-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium">Connectors</h4>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                    <h4 className="text-sm font-medium">Selenium Scripts</h4>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={() => setIsCreateScriptDialogOpen(true)}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
 
                   <div className="mt-2 space-y-2">
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-100">
-                          <svg
-                            className="h-3 w-3 text-amber-600"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M13.833 2.5H15.5c.69 0 1.25.56 1.25 1.25V4h2.75c.69 0 1.25.56 1.25 1.25v15.5c0 .69-.56 1.25-1.25 1.25H4.5c-.69 0-1.25-.56-1.25-1.25V5.25C3.25 4.56 3.81 4 4.5 4h2.75V3.75c0-.69.56-1.25 1.25-1.25h1.667c.69 0 1.25.56 1.25 1.25v.5h1.666v-.5c0-.69.56-1.25 1.25-1.25z" />
-                          </svg>
-                        </div>
-                        <p className="text-xs font-medium">
-                          AWS Asset Inventory
+                    {seleniumScripts.length > 0 ? (
+                      seleniumScripts.map((script) => (
+                        <SeleniumScriptItem
+                          key={script.id}
+                          script={script}
+                          onDelete={handleDeleteSeleniumScript}
+                        />
+                      ))
+                    ) : (
+                      <div className="rounded-md border border-dashed p-4 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          No Selenium scripts added yet
                         </p>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="mt-1 h-auto p-0 text-xs"
+                          onClick={() => setIsCreateScriptDialogOpen(true)}
+                        >
+                          Add your first Selenium script
+                        </Button>
                       </div>
-                    </div>
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-red-100">
-                          <svg
-                            className="h-3 w-3 text-red-600"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
-                          </svg>
-                        </div>
-                        <p className="text-xs font-medium">Adobe</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -342,6 +419,7 @@ export function ProjectDetail() {
                   <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
                   <TabsTrigger value="charts">Charts</TabsTrigger>
                   <TabsTrigger value="actions">Actions</TabsTrigger>
+                  <TabsTrigger value="selenium">Selenium Scripts</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="dashboards" className="space-y-4">
@@ -430,6 +508,89 @@ export function ProjectDetail() {
                     </div>
                   </div>
                 </TabsContent>
+
+                <TabsContent value="selenium" className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">Selenium Scripts</h3>
+                    <Button
+                      size="sm"
+                      onClick={() => setIsCreateScriptDialogOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Selenium Script
+                    </Button>
+                  </div>
+
+                  {scriptsLoading ? (
+                    <div className="flex h-40 items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : seleniumScripts.length > 0 ? (
+                    <div className="space-y-4">
+                      {seleniumScripts.map((script) => (
+                        <div key={script.id} className="rounded-lg border p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-100">
+                                <Code className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{script.name}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {script.description || "No description"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    script.script_content,
+                                  );
+                                }}
+                              >
+                                Copy Script
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  handleDeleteSeleniumScript(script.id)
+                                }
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            <pre className="rounded-md bg-slate-100 p-4 text-xs font-mono overflow-auto max-h-[300px]">
+                              {script.script_content}
+                            </pre>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                        <Code className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="mt-4 font-medium">
+                        No Selenium scripts added yet
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Add Selenium scripts to automate browser interactions.
+                      </p>
+                      <Button
+                        className="mt-4"
+                        onClick={() => setIsCreateScriptDialogOpen(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" /> Add Selenium Script
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
               </Tabs>
             </div>
           </div>
@@ -440,6 +601,13 @@ export function ProjectDetail() {
         open={isCreateDatasetDialogOpen}
         onOpenChange={setIsCreateDatasetDialogOpen}
         onCreateDataset={handleCreateDataset}
+        projectId={projectId || ""}
+      />
+
+      <CreateSeleniumScriptDialog
+        open={isCreateScriptDialogOpen}
+        onOpenChange={setIsCreateScriptDialogOpen}
+        onCreateScript={handleCreateSeleniumScript}
         projectId={projectId || ""}
       />
     </div>
