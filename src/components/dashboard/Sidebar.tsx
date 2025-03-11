@@ -41,7 +41,7 @@ export function Sidebar() {
   return (
     <div className="flex h-full w-64 flex-col bg-slate-900 text-white">
       <div className="flex h-14 items-center justify-between border-b border-slate-800 px-4">
-        <h2 className="text-lg font-semibold">Supply Chain Hub</h2>
+        <h2 className="text-lg font-semibold">SQA-SSH</h2>
       </div>
       <div className="flex-1 overflow-auto py-4">
         <nav className="grid gap-1 px-2">
