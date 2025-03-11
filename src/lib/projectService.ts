@@ -16,6 +16,17 @@ export interface TeamMember {
 // Get all projects for the current user
 export async function getUserProjects() {
   try {
+    // Get current user ID from localStorage or Supabase session
+    const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("No authenticated user found");
+        return [];
+      }
+    }
+
     const { data: projects, error } = await supabase
       .from("projects")
       .select(
@@ -30,6 +41,7 @@ export async function getUserProjects() {
         dashboards,
         created_at,
         updated_at,
+        user_id,
         project_team_members(
           team_members(
             id,
@@ -39,6 +51,7 @@ export async function getUserProjects() {
         )
       `,
       )
+      .eq("user_id", userId) // Filter projects by user_id
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -113,6 +126,17 @@ export async function getUserProjects() {
 // Get a single project by ID
 export async function getProjectById(id: string) {
   try {
+    // Get current user ID from localStorage or Supabase session
+    const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("No authenticated user found");
+        return null;
+      }
+    }
+
     const { data: project, error } = await supabase
       .from("projects")
       .select(
@@ -127,6 +151,7 @@ export async function getProjectById(id: string) {
         dashboards,
         created_at,
         updated_at,
+        user_id,
         project_team_members(
           team_members(
             id,
@@ -137,6 +162,7 @@ export async function getProjectById(id: string) {
       `,
       )
       .eq("id", id)
+      .eq("user_id", userId) // Ensure the project belongs to the current user
       .single();
 
     if (error) {
@@ -204,13 +230,24 @@ export async function getProjectById(id: string) {
 // Create a new project
 export async function createProject(projectData: ProjectCreateData) {
   try {
-    // For demo purposes, use a mock user ID from localStorage
-    const userEmail = localStorage.getItem("userEmail") || "demo@example.com";
-    const mockUserId = "demo-user-" + userEmail.split("@")[0];
+    // Get the current user ID from Supabase session or localStorage
+    let userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        userId = sessionData.session.user.id;
+      } else {
+        // Fallback for demo purposes
+        const userEmail =
+          localStorage.getItem("userEmail") || "demo@example.com";
+        userId = "demo-user-" + userEmail.split("@")[0];
+      }
+    }
 
     console.log("Creating project with data:", {
       ...projectData,
-      user_id: mockUserId,
+      user_id: userId,
     });
 
     // Create the project
@@ -222,7 +259,7 @@ export async function createProject(projectData: ProjectCreateData) {
           projectData.description ||
           `This is a new ${projectData.category.toLowerCase()} project.`,
         category: projectData.category,
-        user_id: mockUserId,
+        user_id: userId,
         resources: 0,
         flows: 0,
         datasets: 0,
@@ -245,8 +282,8 @@ export async function createProject(projectData: ProjectCreateData) {
 
     // Create a default team member
     const defaultMember = {
-      name: userEmail.split("@")[0] || "User",
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${mockUserId}`,
+      name: localStorage.getItem("userEmail")?.split("@")[0] || "User",
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
     };
 
     console.log("Creating team member:", defaultMember);

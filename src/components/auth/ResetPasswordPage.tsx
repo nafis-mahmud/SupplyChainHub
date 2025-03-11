@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -19,6 +20,18 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+
+  // Check if we have a valid session when the component mounts
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        // No valid session, redirect to login
+        navigate("/login");
+      }
+    };
+    checkSession();
+  }, [navigate]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,28 +42,29 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // For demo purposes, simulate successful password reset
-      setTimeout(() => {
-        setSuccess(true);
-
-        // Redirect after a short delay
-        setTimeout(() => {
-          navigate("/login");
-        }, 3000);
-      }, 1000);
-
-      // In a real app, you would use Supabase auth
-      /*
+      // Use Supabase auth to update the user's password
       const { error } = await supabase.auth.updateUser({
         password,
       });
 
       if (error) throw error;
-      */
+
+      setSuccess(true);
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        navigate("/login");
+      }, 3000);
     } catch (err: any) {
+      console.error("Password reset error:", err);
       setError(err.message || "Failed to reset password");
     } finally {
       setLoading(false);
@@ -113,9 +127,6 @@ export default function ResetPasswordPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Resetting password..." : "Reset password"}
             </Button>
-            <div className="mt-2 text-center text-xs text-muted-foreground">
-              <p>For demo purposes, any matching passwords will work</p>
-            </div>
           </form>
         </CardContent>
       </Card>

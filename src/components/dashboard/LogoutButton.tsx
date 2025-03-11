@@ -1,17 +1,31 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export function LogoutButton() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Clear authentication state
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userEmail");
+  const handleLogout = async () => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
 
-    // Redirect to login page
-    navigate("/login");
+      // Clear authentication state from localStorage
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userId");
+
+      // Redirect to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still clear local storage and redirect even if Supabase logout fails
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userId");
+      navigate("/login");
+    }
   };
 
   return (

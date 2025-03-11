@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("demo@example.com");
@@ -37,18 +38,23 @@ export default function LoginPage() {
         return;
       }
 
-      // For demo purposes, any email with valid format and password length >= 6 will work
-      if (password.length >= 6) {
-        setTimeout(() => {
-          // Set login state in localStorage
-          localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("userEmail", email);
-          navigate("/");
-        }, 1000);
-      } else {
-        throw new Error("Password must be at least 6 characters");
+      // Use Supabase auth for real login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data && data.user) {
+        // Set login state in localStorage
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userEmail", email);
+        localStorage.setItem("userId", data.user.id);
+        navigate("/");
       }
     } catch (err: any) {
+      console.error("Login error:", err);
       setError(err.message || "Failed to sign in");
     } finally {
       setLoading(false);

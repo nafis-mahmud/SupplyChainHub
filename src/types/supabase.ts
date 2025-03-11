@@ -13,7 +13,6 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
-          file_type: string
           id: string
           name: string
           project_id: string | null
@@ -22,7 +21,6 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
-          file_type: string
           id?: string
           name: string
           project_id?: string | null
@@ -31,7 +29,6 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
-          file_type?: string
           id?: string
           name?: string
           project_id?: string | null
@@ -145,6 +142,44 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      selenium_scripts: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          project_id: string | null
+          script_content: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          project_id?: string | null
+          script_content: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string | null
+          script_content?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "selenium_scripts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {
