@@ -31,17 +31,16 @@ export default function SignupPage() {
       return;
     }
 
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // For demo purposes, simulate successful signup
-      setTimeout(() => {
-        setSuccess(true);
-      }, 1000);
-
-      // In a real app, you would use Supabase auth
-      /*
-      const { error } = await supabase.auth.signUp({
+      // Use Supabase auth to create a new user
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -50,8 +49,27 @@ export default function SignupPage() {
       });
 
       if (error) throw error;
-      */
+
+      // Create a user profile in the public.profiles table
+      if (data.user) {
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: data.user.id,
+          first_name: "",
+          last_name: "",
+          avatar_url: "",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        if (profileError) {
+          console.error("Error creating user profile:", profileError);
+          // Continue anyway, the auth user was created
+        }
+      }
+
+      setSuccess(true);
     } catch (err: any) {
+      console.error("Signup error:", err);
       setError(err.message || "Failed to sign up");
     } finally {
       setLoading(false);
@@ -67,8 +85,8 @@ export default function SignupPage() {
               Account created successfully
             </CardTitle>
             <CardDescription>
-              Your account has been created. In a real app, we would send you a
-              confirmation email.
+              Your account has been created. Please check your email for a
+              confirmation link.
             </CardDescription>
           </CardHeader>
           <CardFooter>
@@ -129,9 +147,6 @@ export default function SignupPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account..." : "Create account"}
             </Button>
-            <div className="mt-2 text-center text-xs text-muted-foreground">
-              <p>For demo purposes, any valid email/password will work</p>
-            </div>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
