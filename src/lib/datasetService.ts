@@ -15,6 +15,11 @@ export interface DatasetCreateData {
   project_id: string;
 }
 
+export interface DatasetUpdateData {
+  name?: string;
+  description?: string;
+}
+
 // Get all datasets for a project
 export async function getProjectDatasets(projectId: string) {
   try {
@@ -64,6 +69,36 @@ export async function createDataset(datasetData: DatasetCreateData) {
     return data[0] as Dataset;
   } catch (error) {
     console.error("Error in createDataset:", error);
+    return null;
+  }
+}
+
+// Update a dataset
+export async function updateDataset(id: string, updateData: DatasetUpdateData) {
+  try {
+    const { data, error } = await supabase
+      .from("datasets")
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      console.error("Error updating dataset:", error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      console.error("No dataset returned after update");
+      return null;
+    }
+
+    console.log("Dataset updated successfully:", data[0]);
+    return data[0] as Dataset;
+  } catch (error) {
+    console.error("Error in updateDataset:", error);
     return null;
   }
 }

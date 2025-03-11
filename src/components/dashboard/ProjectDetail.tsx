@@ -118,6 +118,21 @@ export function ProjectDetail() {
     }
   };
 
+  // Refresh datasets after update
+  const refreshDatasets = async () => {
+    if (!projectId) return;
+
+    try {
+      setDatasetsLoading(true);
+      const datasetsData = await getProjectDatasets(projectId);
+      setDatasets(datasetsData);
+    } catch (err) {
+      console.error("Error refreshing datasets:", err);
+    } finally {
+      setDatasetsLoading(false);
+    }
+  };
+
   const handleDeleteDataset = async (datasetId: string) => {
     try {
       const success = await deleteDataset(datasetId);
