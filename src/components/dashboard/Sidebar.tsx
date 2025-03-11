@@ -44,12 +44,6 @@ export function Sidebar() {
         <h2 className="text-lg font-semibold">Supply Chain Hub</h2>
       </div>
       <div className="flex-1 overflow-auto py-4">
-        <div className="mb-6 px-4">
-          <div className="rounded-lg bg-slate-800 p-3">
-            <p className="text-xs text-slate-400">Logged in as</p>
-            <p className="truncate text-sm font-medium">{userEmail}</p>
-          </div>
-        </div>
         <nav className="grid gap-1 px-2">
           <SidebarItem
             icon={<Home className="h-4 w-4" />}
@@ -95,6 +89,12 @@ export function Sidebar() {
           />
         </nav>
       </div>
+      <div className="mb-6 px-4">
+          <div className="rounded-lg bg-slate-800 p-3">
+            <p className="text-xs text-slate-400">Logged in as</p>
+            <p className="truncate text-sm font-medium">{userEmail}</p>
+          </div>
+        </div>
       <div className="border-t border-slate-800 p-4">
         <LogoutButton />
       </div>
