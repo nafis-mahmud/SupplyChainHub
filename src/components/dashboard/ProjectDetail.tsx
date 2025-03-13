@@ -377,7 +377,7 @@ export function ProjectDetail() {
                   <TabsTrigger value="actions">Actions</TabsTrigger>
                 </TabsList>
 
-                {/* <TabsContent value="dashboards" className="space-y-4">
+                <TabsContent value="dashboards" className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">Dashboards</h3>
                     <Button size="sm">
@@ -442,22 +442,9 @@ export function ProjectDetail() {
                       </Button>
                     </div>
                   )}
-                </TabsContent> */}
+                </TabsContent>
 
-                <TabsContent value="dashboards" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">Code Editor</h3>
-                  </div>
-
-                  <div className="rounded-lg border p-4">
-                    <Editor
-                      height="400px"
-                      defaultLanguage="javascript"
-                      defaultValue="// Write your code here..."
-                      theme="vs-dark"
-                    />
-                  </div>
-                </TabsContent>;
+                
 
                 <TabsContent value="charts" className="space-y-4">
                   <div className="flex items-center justify-between">
