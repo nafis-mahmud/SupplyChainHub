@@ -21,7 +21,7 @@ export default defineConfig({
       plugins: conditionalPlugins,
     }),
     tempo(),
-    base: process.env.VITE_BASE_PATH || "/SupplyChainHub"
+    
   ],
   resolve: {
     preserveSymlinks: true,
@@ -32,5 +32,6 @@ export default defineConfig({
   server: {
     // @ts-ignore
     allowedHosts: true,
-  }
+  },
+
 });
