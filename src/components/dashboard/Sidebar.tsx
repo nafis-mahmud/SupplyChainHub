@@ -48,7 +48,7 @@ export function Sidebar() {
           <SidebarItem
             icon={<Home className="h-4 w-4" />}
             label="Dashboard"
-            href="/"
+            href="/projects"
             active={pathname === "/"}
           />
           <SidebarItem
