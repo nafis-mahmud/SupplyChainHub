@@ -33,7 +33,7 @@ export default function LoginPage() {
           // Set login state in localStorage
           localStorage.setItem("isLoggedIn", "true");
           localStorage.setItem("userEmail", email);
-          navigate("/");
+          navigate("/dashboard");
         }, 1000);
         return;
       }
@@ -51,7 +51,7 @@ export default function LoginPage() {
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userEmail", email);
         localStorage.setItem("userId", data.user.id);
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (err: any) {
       console.error("Login error:", err);

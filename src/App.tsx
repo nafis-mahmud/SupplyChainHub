@@ -12,7 +12,8 @@ import routes from "tempo-routes";
 import { ProjectDetail } from "./components/dashboard/ProjectDetail";
 import AuthGuard from "./components/auth/AuthGuard";
 
-// Lazy load auth components
+// Lazy load components
+const LandingPage = lazy(() => import("./components/landing/LandingPage"));
 const LoginPage = lazy(() => import("./components/auth/LoginPage"));
 const SignupPage = lazy(() => import("./components/auth/SignupPage"));
 const ForgotPasswordPage = lazy(
@@ -32,8 +33,8 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 
     if (isLoggedIn) {
-      // If user is logged in and trying to access auth pages, redirect to home
-      navigate("/", { replace: true });
+      // If user is logged in and trying to access auth pages, redirect to dashboard
+      navigate("/dashboard", { replace: true });
     }
   }, [navigate, location]);
 
@@ -41,7 +42,7 @@ function AuthRedirect({ children }: { children: React.ReactNode }) {
 }
 
 // Root component to redirect to login if not authenticated
-function Root() {
+function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,6 +69,9 @@ function App() {
     >
       <>
         <Routes>
+          {/* Public landing page */}
+          <Route path="/" element={<LandingPage />} />
+
           {/* Auth routes - wrapped with AuthRedirect to prevent access when logged in */}
           <Route
             path="/login"
@@ -104,10 +108,10 @@ function App() {
 
           {/* Protected routes */}
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <AuthGuard>
-                <Root />
+                <Dashboard />
               </AuthGuard>
             }
           />

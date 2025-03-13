@@ -3,19 +3,17 @@ import { ProjectCardProps } from "./ProjectCard";
 // Mock data for demonstration
 export let categories = [
   { id: "all", name: "All Projects", count: 12 },
-  { id: "supply-chain", name: "Supply Chain", count: 5 },
-  { id: "inventory", name: "Inventory", count: 3 },
-  { id: "logistics", name: "Logistics", count: 2 },
-  { id: "procurement", name: "Procurement", count: 2 },
+  { id: "manual-testing", name: "Manual Testing", count: 7 },
+  { id: "automation-testing", name: "Automation Testing (AI Agent)", count: 5 },
 ];
 
 export const mockProjects: ProjectCardProps[] = [
   {
     id: "1",
-    title: "Global Supply Chain Optimization",
+    title: "E-commerce Website Testing",
     description:
-      "Optimize the global supply chain network to reduce costs and improve delivery times.",
-    category: "Supply Chain",
+      "Comprehensive manual testing of the e-commerce website including checkout flow and user account features.",
+    category: "Manual Testing",
     resources: 12,
     flows: 8,
     datasets: 5,
@@ -46,10 +44,10 @@ export const mockProjects: ProjectCardProps[] = [
   },
   {
     id: "2",
-    title: "Warehouse Inventory Management",
+    title: "Login Flow Automation",
     description:
-      "Track and manage inventory levels across multiple warehouse locations.",
-    category: "Inventory",
+      "Automated testing of user authentication flows using AI-powered test generation.",
+    category: "Automation Testing (AI Agent)",
     resources: 8,
     flows: 5,
     datasets: 3,
@@ -70,10 +68,10 @@ export const mockProjects: ProjectCardProps[] = [
   },
   {
     id: "3",
-    title: "Logistics Route Optimization",
+    title: "Mobile App Regression Testing",
     description:
-      "Optimize delivery routes to minimize fuel consumption and delivery times.",
-    category: "Logistics",
+      "Manual regression testing suite for the iOS and Android mobile applications.",
+    category: "Manual Testing",
     resources: 6,
     flows: 4,
     datasets: 2,
@@ -99,10 +97,10 @@ export const mockProjects: ProjectCardProps[] = [
   },
   {
     id: "4",
-    title: "Procurement Analytics",
+    title: "API Integration Tests",
     description:
-      "Analyze procurement data to identify cost-saving opportunities and optimize vendor selection.",
-    category: "Procurement",
+      "Automated testing of RESTful API endpoints with AI-generated test cases and assertions.",
+    category: "Automation Testing (AI Agent)",
     resources: 10,
     flows: 6,
     datasets: 4,
@@ -123,10 +121,10 @@ export const mockProjects: ProjectCardProps[] = [
   },
   {
     id: "5",
-    title: "Inventory Forecasting",
+    title: "Payment Gateway Testing",
     description:
-      "Forecast inventory needs based on historical data and seasonal trends.",
-    category: "Inventory",
+      "Manual testing of payment gateway integrations with various credit card providers.",
+    category: "Manual Testing",
     resources: 7,
     flows: 3,
     datasets: 5,
@@ -147,10 +145,10 @@ export const mockProjects: ProjectCardProps[] = [
   },
   {
     id: "6",
-    title: "Supplier Performance Dashboard",
+    title: "Cross-browser Compatibility Tests",
     description:
-      "Monitor and evaluate supplier performance metrics in real-time.",
-    category: "Supply Chain",
+      "Automated testing across multiple browsers and screen sizes using AI-powered visual comparison.",
+    category: "Automation Testing (AI Agent)",
     resources: 9,
     flows: 4,
     datasets: 6,

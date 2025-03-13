@@ -107,10 +107,12 @@ export default function ProjectCreationDemo() {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Supply Chain">Supply Chain</SelectItem>
-                    <SelectItem value="Inventory">Inventory</SelectItem>
-                    <SelectItem value="Logistics">Logistics</SelectItem>
-                    <SelectItem value="Procurement">Procurement</SelectItem>
+                    <SelectItem value="Manual Testing">
+                      Manual Testing
+                    </SelectItem>
+                    <SelectItem value="Automation Testing (AI Agent)">
+                      Automation Testing (AI Agent)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

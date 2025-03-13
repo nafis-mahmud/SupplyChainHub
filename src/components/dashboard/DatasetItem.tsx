@@ -48,7 +48,7 @@ export function DatasetItem({
       >
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-            <Database className="h-3 w-3 text-primary" />
+            <FileText className="h-3 w-3 text-primary" />
           </div>
           <div className="flex items-center gap-1">
             {expanded ? (

@@ -57,26 +57,26 @@ export function CreateDatasetDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Dataset</DialogTitle>
+          <DialogTitle>Add New File</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Dataset Name</Label>
+            <Label htmlFor="name">File Name</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter dataset name"
+              placeholder="Enter file name (e.g. test.js)"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Description (Optional)</Label>
+            <Label htmlFor="description">File Content</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter dataset description"
+              placeholder="Enter file content here"
               rows={3}
             />
           </div>
@@ -91,7 +91,7 @@ export function CreateDatasetDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={!name || isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Dataset"}
+              {isSubmitting ? "Adding..." : "Add File"}
             </Button>
           </DialogFooter>
         </form>

@@ -6,19 +6,32 @@ import { ProjectList } from "./ProjectList";
 import { ViewMode } from "./ViewToggle";
 import { ProjectCardProps } from "./ProjectCard";
 import { CreateProjectDialog } from "./CreateProjectDialog";
+import { EditProjectDialog } from "./EditProjectDialog";
+import { DeleteProjectDialog } from "./DeleteProjectDialog";
 import { categories } from "./mockData";
-import { getUserProjects, createProject } from "@/lib/projectService";
+import {
+  getUserProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from "@/lib/projectService";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] =
+    useState<ProjectCardProps | null>(null);
   const [projects, setProjects] = useState<ProjectCardProps[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch projects from Supabase on component mount
   useEffect(() => {
@@ -73,6 +86,110 @@ export function ProjectsPage() {
 
   const handleCreateProject = () => {
     setIsCreateDialogOpen(true);
+  };
+
+  const handleEditProject = (projectId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (project) {
+      setSelectedProject(project);
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (project) {
+      setSelectedProject(project);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const handleSaveEditedProject = async (data: {
+    title: string;
+    category: string;
+    description: string;
+  }) => {
+    if (!selectedProject) return;
+
+    try {
+      setLoading(true);
+      const updatedProject = await updateProject(selectedProject.id, data);
+
+      if (updatedProject) {
+        // Update the project in the local state
+        setProjects(
+          projects.map((p) =>
+            p.id === selectedProject.id
+              ? {
+                  ...p,
+                  title: data.title,
+                  category: data.category,
+                  description: data.description,
+                  lastUpdated: "Just now",
+                }
+              : p,
+          ),
+        );
+
+        toast({
+          title: "Project updated",
+          description: "The project has been updated successfully.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating project:", err);
+      toast({
+        title: "Update failed",
+        description: "Failed to update the project. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedProject) return;
+
+    try {
+      setLoading(true);
+      const success = await deleteProject(selectedProject.id);
+
+      if (success) {
+        // Remove the project from the local state
+        setProjects(projects.filter((p) => p.id !== selectedProject.id));
+
+        // Update category counts
+        const categoryId = categories.find(
+          (c) => c.name === selectedProject.category,
+        )?.id;
+
+        if (categoryId && categoryId !== "all") {
+          const categoryIndex = categories.findIndex(
+            (c) => c.id === categoryId,
+          );
+          if (categoryIndex !== -1 && categories[categoryIndex].count > 0) {
+            categories[categoryIndex].count -= 1;
+            categories[0].count -= 1; // Update 'All Projects' count
+          }
+        }
+
+        toast({
+          title: "Project deleted",
+          description: "The project has been deleted successfully.",
+        });
+      }
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete the project. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   const handleProjectCreation = async (projectData: {
@@ -187,7 +304,12 @@ export function ProjectsPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : filteredProjects.length > 0 ? (
-                <ProjectList projects={filteredProjects} viewMode={viewMode} />
+                <ProjectList
+                  projects={filteredProjects}
+                  viewMode={viewMode}
+                  onEdit={handleEditProject}
+                  onDelete={handleDeleteProject}
+                />
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-lg border border-dashed">
                   <p className="text-muted-foreground">No projects found</p>
@@ -204,6 +326,25 @@ export function ProjectsPage() {
         onCreateProject={handleProjectCreation}
         categories={categories}
       />
+
+      {selectedProject && (
+        <>
+          <EditProjectDialog
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSave={handleSaveEditedProject}
+            project={selectedProject}
+            categories={categories}
+          />
+
+          <DeleteProjectDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            onConfirm={handleConfirmDelete}
+            projectTitle={selectedProject.title}
+          />
+        </>
+      )}
     </div>
   );
 }

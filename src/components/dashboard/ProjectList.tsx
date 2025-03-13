@@ -6,12 +6,16 @@ interface ProjectListProps {
   projects: ProjectCardProps[];
   viewMode: ViewMode;
   className?: string;
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function ProjectList({
   projects,
   viewMode,
   className,
+  onEdit,
+  onDelete,
 }: ProjectListProps) {
   return (
     <div
@@ -29,6 +33,8 @@ export function ProjectList({
           className={
             viewMode === "list" ? "flex flex-col md:flex-row" : undefined
           }
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

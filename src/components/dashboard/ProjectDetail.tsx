@@ -19,6 +19,12 @@ import {
   Search,
   Loader2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProjectCardProps } from "./ProjectCard";
 import { getProjectById } from "@/lib/projectService";
 import {
@@ -174,7 +180,7 @@ export function ProjectDetail() {
             {error || "The project you're looking for doesn't exist."}
           </p>
           <Button asChild className="mt-4">
-            <Link to="/">Back to Dashboard</Link>
+            <Link to="/projects">Back to Projects</Link>
           </Button>
         </div>
       </div>
@@ -190,7 +196,7 @@ export function ProjectDetail() {
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" asChild>
-                <Link to="/">
+                <Link to="/projects">
                   <ChevronLeft className="h-5 w-5" />
                 </Link>
               </Button>
@@ -251,87 +257,127 @@ export function ProjectDetail() {
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 </div>
 
-                <div className="mt-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium">Datasets</h4>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={() => setIsCreateDatasetDialogOpen(true)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
+                {project.category === "Automation Testing (AI Agent)" ? (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">Chat History</h4>
+                      <Button variant="ghost" size="icon" className="h-5 w-5">
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
 
-                  <div className="mt-2 space-y-2">
-                    {datasets.length > 0 ? (
-                      datasets.map((dataset) => (
-                        <DatasetItem
-                          key={dataset.id}
-                          dataset={dataset}
-                          onDelete={handleDeleteDataset}
-                        />
-                      ))
-                    ) : (
-                      <div className="rounded-md border border-dashed p-4 text-center">
-                        <p className="text-xs text-muted-foreground">
-                          No datasets added yet
+                    <div className="mt-2 space-y-2">
+                      <div className="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                        <p className="text-xs font-medium">
+                          Sales Analysis Q2 2024
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                          2 hours ago
+                        </p>
+                      </div>
+                      <div className="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                        <p className="text-xs font-medium">
+                          Customer Retention Report
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Yesterday
+                        </p>
+                      </div>
+                      <div className="rounded-md border p-2 hover:bg-accent cursor-pointer">
+                        <p className="text-xs font-medium">
+                          Product Performance Analysis
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          3 days ago
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">Datasets</h4>
                         <Button
-                          variant="link"
-                          size="sm"
-                          className="mt-1 h-auto p-0 text-xs"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5"
                           onClick={() => setIsCreateDatasetDialogOpen(true)}
                         >
-                          Add your first dataset
+                          <Plus className="h-3 w-3" />
                         </Button>
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="mt-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium">Connectors</h4>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-
-                  <div className="mt-2 space-y-2">
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-100">
-                          <svg
-                            className="h-3 w-3 text-amber-600"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M13.833 2.5H15.5c.69 0 1.25.56 1.25 1.25V4h2.75c.69 0 1.25.56 1.25 1.25v15.5c0 .69-.56 1.25-1.25 1.25H4.5c-.69 0-1.25-.56-1.25-1.25V5.25C3.25 4.56 3.81 4 4.5 4h2.75V3.75c0-.69.56-1.25 1.25-1.25h1.667c.69 0 1.25.56 1.25 1.25v.5h1.666v-.5c0-.69.56-1.25 1.25-1.25z" />
-                          </svg>
-                        </div>
-                        <p className="text-xs font-medium">
-                          AWS Asset Inventory
-                        </p>
+                      <div className="mt-2 space-y-2">
+                        {datasets.length > 0 ? (
+                          datasets.map((dataset) => (
+                            <DatasetItem
+                              key={dataset.id}
+                              dataset={dataset}
+                              onDelete={handleDeleteDataset}
+                            />
+                          ))
+                        ) : (
+                          <div className="rounded-md border border-dashed p-4 text-center">
+                            <p className="text-xs text-muted-foreground">
+                              No datasets added yet
+                            </p>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="mt-1 h-auto p-0 text-xs"
+                              onClick={() => setIsCreateDatasetDialogOpen(true)}
+                            >
+                              Add your first dataset
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="rounded-md border p-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-red-100">
-                          <svg
-                            className="h-3 w-3 text-red-600"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
-                          </svg>
+
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">Connectors</h4>
+                        <Button variant="ghost" size="icon" className="h-5 w-5">
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <div className="mt-2 space-y-2">
+                        <div className="rounded-md border p-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-100">
+                              <svg
+                                className="h-3 w-3 text-amber-600"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M13.833 2.5H15.5c.69 0 1.25.56 1.25 1.25V4h2.75c.69 0 1.25.56 1.25 1.25v15.5c0 .69-.56 1.25-1.25 1.25H4.5c-.69 0-1.25-.56-1.25-1.25V5.25C3.25 4.56 3.81 4 4.5 4h2.75V3.75c0-.69.56-1.25 1.25-1.25h1.667c.69 0 1.25.56 1.25 1.25v.5h1.666v-.5c0-.69.56-1.25 1.25-1.25z" />
+                              </svg>
+                            </div>
+                            <p className="text-xs font-medium">
+                              AWS Asset Inventory
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-xs font-medium">Adobe</p>
+                        <div className="rounded-md border p-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-6 w-6 items-center justify-center rounded bg-red-100">
+                              <svg
+                                className="h-3 w-3 text-red-600"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+                              </svg>
+                            </div>
+                            <p className="text-xs font-medium">Adobe</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -352,20 +398,81 @@ export function ProjectDetail() {
                     </Button>
                   </div>
 
-                  <div className="rounded-lg border border-dashed p-8 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      <BarChart3 className="h-6 w-6 text-primary" />
+                  {project.category === "Automation Testing (AI Agent)" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Enter your prompt here..."
+                            className="flex-1"
+                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon">
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <FileText className="mr-2 h-4 w-4" /> Upload PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Database className="mr-2 h-4 w-4" /> Upload
+                                Excel
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <h4 className="text-sm font-medium mb-2">
+                          Chat History
+                        </h4>
+                        <div className="space-y-2">
+                          <div className="rounded-md bg-muted p-3">
+                            <p className="text-sm">
+                              How many products were sold last month?
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              2 hours ago
+                            </p>
+                          </div>
+                          <div className="rounded-md bg-muted p-3">
+                            <p className="text-sm">
+                              Generate a sales forecast for Q3
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Yesterday
+                            </p>
+                          </div>
+                          <div className="rounded-md bg-muted p-3">
+                            <p className="text-sm">
+                              Compare revenue between 2023 and 2024
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              3 days ago
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <h3 className="mt-4 font-medium">
-                      No dashboards added yet
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Create your first dashboard to visualize your data.
-                    </p>
-                    <Button className="mt-4">
-                      <Plus className="mr-2 h-4 w-4" /> Create Dashboard
-                    </Button>
-                  </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                        <BarChart3 className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="mt-4 font-medium">
+                        No dashboards added yet
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Create your first dashboard to visualize your data.
+                      </p>
+                      <Button className="mt-4">
+                        <Plus className="mr-2 h-4 w-4" /> Create Dashboard
+                      </Button>
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="charts" className="space-y-4">
