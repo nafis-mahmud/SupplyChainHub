@@ -266,31 +266,17 @@ export function ProjectDetail() {
                       </Button>
                     </div>
 
-                    <div className="mt-2 space-y-2">
-                      <div className="rounded-md border p-2 hover:bg-accent cursor-pointer">
-                        <p className="text-xs font-medium">
-                          Sales Analysis Q2 2024
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          2 hours ago
-                        </p>
-                      </div>
-                      <div className="rounded-md border p-2 hover:bg-accent cursor-pointer">
-                        <p className="text-xs font-medium">
-                          Customer Retention Report
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Yesterday
-                        </p>
-                      </div>
-                      <div className="rounded-md border p-2 hover:bg-accent cursor-pointer">
-                        <p className="text-xs font-medium">
-                          Product Performance Analysis
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          3 days ago
-                        </p>
-                      </div>
+                    <div className="mt-2 rounded-md border border-dashed p-4 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        No chat history yet
+                      </p>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="mt-1 h-auto p-0 text-xs"
+                      >
+                        Start a new conversation
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -429,31 +415,13 @@ export function ProjectDetail() {
                         <h4 className="text-sm font-medium mb-2">
                           Chat History
                         </h4>
-                        <div className="space-y-2">
-                          <div className="rounded-md bg-muted p-3">
-                            <p className="text-sm">
-                              How many products were sold last month?
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              2 hours ago
-                            </p>
-                          </div>
-                          <div className="rounded-md bg-muted p-3">
-                            <p className="text-sm">
-                              Generate a sales forecast for Q3
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Yesterday
-                            </p>
-                          </div>
-                          <div className="rounded-md bg-muted p-3">
-                            <p className="text-sm">
-                              Compare revenue between 2023 and 2024
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              3 days ago
-                            </p>
-                          </div>
+                        <div className="flex flex-col items-center justify-center py-4">
+                          <p className="text-sm text-muted-foreground">
+                            No chat history yet
+                          </p>
+                          <Button variant="link" size="sm" className="mt-1">
+                            Start a new conversation
+                          </Button>
                         </div>
                       </div>
                     </div>
