@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
-  Database,
+  FileText,
   Save,
   Trash2,
 } from "lucide-react";
