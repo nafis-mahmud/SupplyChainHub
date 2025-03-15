@@ -57,26 +57,46 @@ export function CreateDatasetDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New File</DialogTitle>
+          <DialogTitle>
+            {projectId && projectId.startsWith("manual-")
+              ? "Add New File"
+              : "Add New Dataset"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">File Name</Label>
+            <Label htmlFor="name">
+              {projectId && projectId.startsWith("manual-")
+                ? "File Name"
+                : "Dataset Name"}
+            </Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter file name (e.g. test.js)"
+              placeholder={
+                projectId && projectId.startsWith("manual-")
+                  ? "Enter file name (e.g. test.js)"
+                  : "Enter dataset name"
+              }
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">File Content</Label>
+            <Label htmlFor="description">
+              {projectId && projectId.startsWith("manual-")
+                ? "File Content"
+                : "Description"}
+            </Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter file content here"
+              placeholder={
+                projectId && projectId.startsWith("manual-")
+                  ? "Enter file content here"
+                  : "Enter dataset description"
+              }
               rows={3}
             />
           </div>
@@ -91,7 +111,11 @@ export function CreateDatasetDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={!name || isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add File"}
+              {isSubmitting
+                ? "Adding..."
+                : projectId && projectId.startsWith("manual-")
+                  ? "Add File"
+                  : "Add Dataset"}
             </Button>
           </DialogFooter>
         </form>

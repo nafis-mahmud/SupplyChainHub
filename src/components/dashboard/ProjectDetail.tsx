@@ -19,6 +19,7 @@ import {
   Plus,
   Search,
   Loader2,
+  Save,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
   getProjectDatasets,
   createDataset,
   deleteDataset,
+  updateDataset,
 } from "@/lib/datasetService";
 import { CreateDatasetDialog } from "./CreateDatasetDialog";
 import { DatasetItem } from "./DatasetItem";
@@ -48,11 +50,14 @@ export function ProjectDetail() {
     projectFromState,
   );
   const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [selectedFile, setSelectedFile] = useState<Dataset | null>(null);
+  const [fileContent, setFileContent] = useState("");
   const [loading, setLoading] = useState(!projectFromState);
   const [datasetsLoading, setDatasetsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDatasetDialogOpen, setIsCreateDatasetDialogOpen] =
     useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // If we don't have the project from state, fetch it from Supabase
@@ -119,6 +124,12 @@ export function ProjectDetail() {
             datasets: (project.datasets || 0) + 1,
           });
         }
+
+        // If this is the first file, select it automatically
+        if (datasets.length === 0 && project?.category === "Manual Testing") {
+          setSelectedFile(newDataset);
+          setFileContent(newDataset.description || "");
+        }
       }
     } catch (err) {
       console.error("Error creating dataset:", err);
@@ -144,6 +155,12 @@ export function ProjectDetail() {
     try {
       const success = await deleteDataset(datasetId);
       if (success) {
+        // If the deleted dataset is the selected one, clear the selection
+        if (selectedFile?.id === datasetId) {
+          setSelectedFile(null);
+          setFileContent("");
+        }
+
         setDatasets(datasets.filter((d) => d.id !== datasetId));
 
         // Update project datasets count
@@ -156,6 +173,25 @@ export function ProjectDetail() {
       }
     } catch (err) {
       console.error("Error deleting dataset:", err);
+    }
+  };
+
+  const handleSaveFile = async () => {
+    if (!selectedFile) return;
+
+    setIsSaving(true);
+    try {
+      await updateDataset(selectedFile.id, { description: fileContent });
+      // Update the local dataset list
+      setDatasets(
+        datasets.map((d) =>
+          d.id === selectedFile.id ? { ...d, description: fileContent } : d,
+        ),
+      );
+    } catch (err) {
+      console.error("Error saving file:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -284,7 +320,11 @@ export function ProjectDetail() {
                   <>
                     <div className="mt-4">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium">Datasets</h4>
+                        <h4 className="text-sm font-medium">
+                          {project.category === "Manual Testing"
+                            ? "Files"
+                            : "Datasets"}
+                        </h4>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -296,18 +336,45 @@ export function ProjectDetail() {
                       </div>
 
                       <div className="mt-2 space-y-2">
-                        {datasets.length > 0 ? (
+                        {datasetsLoading ? (
+                          <div className="flex justify-center p-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          </div>
+                        ) : datasets.length > 0 ? (
                           datasets.map((dataset) => (
-                            <DatasetItem
+                            <div
                               key={dataset.id}
-                              dataset={dataset}
-                              onDelete={handleDeleteDataset}
-                            />
+                              onClick={
+                                project.category === "Manual Testing"
+                                  ? () => {
+                                      setSelectedFile(dataset);
+                                      setFileContent(dataset.description || "");
+                                    }
+                                  : undefined
+                              }
+                              className={
+                                project.category === "Manual Testing"
+                                  ? "cursor-pointer"
+                                  : ""
+                              }
+                            >
+                              <DatasetItem
+                                dataset={dataset}
+                                onDelete={handleDeleteDataset}
+                                className={
+                                  selectedFile?.id === dataset.id
+                                    ? "border-primary"
+                                    : ""
+                                }
+                              />
+                            </div>
                           ))
                         ) : (
                           <div className="rounded-md border border-dashed p-4 text-center">
                             <p className="text-xs text-muted-foreground">
-                              No datasets added yet
+                              {project.category === "Manual Testing"
+                                ? "No files added yet"
+                                : "No datasets added yet"}
                             </p>
                             <Button
                               variant="link"
@@ -315,7 +382,9 @@ export function ProjectDetail() {
                               className="mt-1 h-auto p-0 text-xs"
                               onClick={() => setIsCreateDatasetDialogOpen(true)}
                             >
-                              Add your first dataset
+                              {project.category === "Manual Testing"
+                                ? "Add your first file"
+                                : "Add your first dataset"}
                             </Button>
                           </div>
                         )}
@@ -372,59 +441,70 @@ export function ProjectDetail() {
             <div className="lg:col-span-3">
               <Tabs defaultValue="dashboards">
                 <TabsList className="mb-4">
-                  <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
+                  <TabsTrigger value="dashboards">
+                    {project.category === "Manual Testing"
+                      ? "Code Editor"
+                      : "Dashboards"}
+                  </TabsTrigger>
                   <TabsTrigger value="charts">Charts</TabsTrigger>
                   <TabsTrigger value="actions">Actions</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="dashboards" className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium">Dashboards</h3>
-                    <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Add Dashboard
-                    </Button>
+                    <h3 className="font-medium">
+                      {project.category === "Manual Testing"
+                        ? "Code Editor"
+                        : "Dashboards"}
+                    </h3>
+                    {project.category === "Manual Testing" ? (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleSaveFile}
+                          disabled={!selectedFile || isSaving}
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          {isSaving ? "Saving..." : "Save"}
+                        </Button>
+                        <Button size="sm">
+                          <Play className="mr-2 h-4 w-4" /> Run
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button size="sm">
+                        <Plus className="mr-2 h-4 w-4" /> Add Dashboard
+                      </Button>
+                    )}
                   </div>
 
-                  {project.category === "Automation Testing (AI Agent)" ? (
-                    <div className="space-y-4">
-                      <div className="rounded-lg border p-4">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="Enter your prompt here..."
-                            className="flex-1"
-                          />
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="icon">
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <FileText className="mr-2 h-4 w-4" /> Upload PDF
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Database className="mr-2 h-4 w-4" /> Upload
-                                Excel
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  {project.category === "Manual Testing" ? (
+                    <div className="rounded-lg border p-4">
+                      {selectedFile ? (
+                        <Editor
+                          height="400px"
+                          defaultLanguage="javascript"
+                          value={fileContent}
+                          onChange={(value) => setFileContent(value || "")}
+                          theme="vs-dark"
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-[400px] items-center justify-center text-muted-foreground">
+                          <div className="text-center">
+                            <FileText className="mx-auto h-10 w-10 opacity-20" />
+                            <p className="mt-2">
+                              Select a file from the sidebar or create a new one
+                            </p>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="rounded-lg border p-4">
-                        <h4 className="text-sm font-medium mb-2">
-                          Chat History
-                        </h4>
-                        <div className="flex flex-col items-center justify-center py-4">
-                          <p className="text-sm text-muted-foreground">
-                            No chat history yet
-                          </p>
-                          <Button variant="link" size="sm" className="mt-1">
-                            Start a new conversation
-                          </Button>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed p-8 text-center">
@@ -443,8 +523,6 @@ export function ProjectDetail() {
                     </div>
                   )}
                 </TabsContent>
-
-                
 
                 <TabsContent value="charts" className="space-y-4">
                   <div className="flex items-center justify-between">

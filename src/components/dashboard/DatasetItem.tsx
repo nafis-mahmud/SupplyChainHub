@@ -40,6 +40,12 @@ export function DatasetItem({
     }
   };
 
+  // Function to handle file click - will be used by parent component
+  const handleFileClick = (e) => {
+    e.stopPropagation();
+    // This will be handled by the parent component through a prop if needed
+  };
+
   return (
     <div className={cn("rounded-md border p-2", className)}>
       <div
