@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
+import { generateAuthToken, storeAuthToken } from "@/lib/authToken";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("demo@example.com");
@@ -30,10 +31,21 @@ export default function LoginPage() {
       if (email === "demo@example.com" && password === "password123") {
         // Simulate successful login
         setTimeout(() => {
-          // Set login state in localStorage
-          localStorage.setItem("isLoggedIn", "true");
-          localStorage.setItem("userEmail", email);
-          navigate("/dashboard");
+          try {
+            // Set login state in localStorage
+            localStorage.setItem("isLoggedIn", "true");
+            localStorage.setItem("userEmail", email);
+            
+            // Generate a demo token for the extension
+            const demoToken = generateDemoToken(email);
+            storeAuthToken(demoToken);
+            
+            navigate("/dashboard");
+          } catch (err) {
+            console.error("Error in demo login:", err);
+            setError("Error during login process");
+            setLoading(false);
+          }
         }, 1000);
         return;
       }
@@ -51,6 +63,13 @@ export default function LoginPage() {
         localStorage.setItem("isLoggedIn", "true");
         localStorage.setItem("userEmail", email);
         localStorage.setItem("userId", data.user.id);
+        
+        // Generate and store token for extension authentication
+        const token = await generateAuthToken();
+        if (token) {
+          storeAuthToken(token);
+        }
+        
         navigate("/dashboard");
       }
     } catch (err: any) {
@@ -59,6 +78,21 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Generate a demo token for the demo user
+  const generateDemoToken = (email: string) => {
+    // Create a simple payload
+    const payload = {
+      userId: 'demo-user-id',
+      email: email,
+      role: 'user',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiration
+    };
+    
+    // Base64 encode the payload
+    return btoa(JSON.stringify(payload));
   };
 
   return (

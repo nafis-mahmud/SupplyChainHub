@@ -11,6 +11,7 @@ import Home from "./components/home";
 import routes from "tempo-routes";
 import { ProjectDetail } from "./components/dashboard/ProjectDetail";
 import AuthGuard from "./components/auth/AuthGuard";
+import ExtensionBridge from "./components/auth/ExtensionBridge";
 
 // Lazy load components
 const LandingPage = lazy(() => import("./components/landing/LandingPage"));
@@ -68,6 +69,9 @@ function App() {
       }
     >
       <>
+        {/* Include the ExtensionBridge component to enable communication with the extension */}
+        <ExtensionBridge />
+        
         <Routes>
           {/* Public landing page */}
           <Route path="/" element={<LandingPage />} />

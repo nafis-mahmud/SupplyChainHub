@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interaction Recorder</title>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 15px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      width: 32px;
+      height: 32px;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+    .notification {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      background-color: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+      display: none;
+    }
+    .notification.error {
+      background-color: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    #error-message {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      background-color: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      display: none;
+    }
+    .user-info {
+      background-color: #f3f4f6;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    .user-info p {
+      margin: 5px 0;
+    }
+    .button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      width: 100%;
+    }
+    .button:hover {
+      background-color: #1d4ed8;
+    }
+    .button:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
+    .button.secondary {
+      background-color: #e5e7eb;
+      color: #1f2937;
+    }
+    .button.secondary:hover {
+      background-color: #d1d5db;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .status-recording {
+      color: #b91c1c;
+      font-weight: bold;
+    }
+    .status-not-recording {
+      color: #1f2937;
+    }
+    .section {
+      margin-bottom: 15px;
+    }
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .action-info {
+      display: flex;
+      justify-content: space-between;
+      background-color: #f3f4f6;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-left">
+        <img src="icons/icon48.png" alt="Logo" class="logo">
+        <h1 class="title">Interaction Recorder</h1>
+      </div>
+    </div>
+    
+    <!-- Notification area -->
+    <div id="notification" class="notification">Notification message</div>
+    <div id="error-message">Error message</div>
+    
+    <!-- User info section (shown when authenticated) -->
+    <div id="user-info" style="display: none;">
+      <div class="user-info">
+        <p><strong>Email:</strong> <span id="user-email">-</span></p>
+        <p><strong>Role:</strong> <span id="user-role">-</span></p>
+        <button id="logout-button" class="button secondary">Logout</button>
+      </div>
+    </div>
+    
+    <!-- Authentication section (shown when not authenticated) -->
+    <div id="auth-section">
+      <p>You need to log in to SupplyChainHub to use this extension.</p>
+      <button id="login-button" class="button">Go to Login Page</button>
+    </div>
+    
+    <!-- Recording section (shown when authenticated) -->
+    <div id="recording-section" style="display: none;">
+      <div class="section">
+        <div class="section-title">Recording Status</div>
+        <div class="action-info">
+          <span>Status: <span id="recording-status" class="status-not-recording">Not recording</span></span>
+          <span>Actions: <span id="action-count">0</span></span>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="button-group">
+          <button id="start-recording" class="button">Start Recording</button>
+          <button id="stop-recording" class="button" disabled>Stop Recording</button>
+        </div>
+        <div class="button-group">
+          <button id="generate-script" class="button secondary">Generate Script</button>
+          <button id="clear-recording" class="button secondary">Clear Recording</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
