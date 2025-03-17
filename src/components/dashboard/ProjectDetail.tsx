@@ -243,6 +243,19 @@ export function ProjectDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {project.category === "Automation Testing (AI Agent)" && (
+                <div className="flex items-center gap-2 mr-2">
+                  <Button variant="outline" size="sm">
+                    AI Assistant
+                  </Button>
+                  <Button variant="ghost" size="sm">
+                    Charts
+                  </Button>
+                  <Button variant="ghost" size="sm">
+                    Actions
+                  </Button>
+                </div>
+              )}
               <Button variant="outline" size="sm">
                 <RotateCcw className="mr-2 h-4 w-4" /> Refresh
               </Button>
@@ -439,154 +452,247 @@ export function ProjectDetail() {
 
             {/* Main content area */}
             <div className="lg:col-span-3">
-              <Tabs defaultValue="dashboards">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="dashboards">
-                    {project.category === "Manual Testing"
-                      ? "Code Editor"
-                      : "Dashboards"}
-                  </TabsTrigger>
-                  <TabsTrigger value="charts">Charts</TabsTrigger>
-                  <TabsTrigger value="actions">Actions</TabsTrigger>
-                </TabsList>
+              {project.category === "Automation Testing (AI Agent)" ? (
+                <div className="flex flex-col space-y-4">
+                  {/* Chat display area */}
+                  <div className="rounded-lg border p-4 h-[300px] overflow-y-auto">
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex items-start">
+                        <Avatar className="h-8 w-8 mr-2">
+                          <AvatarImage src="/ai-avatar.png" alt="AI" />
+                          <AvatarFallback>AI</AvatarFallback>
+                        </Avatar>
+                        <div className="bg-muted p-3 rounded-lg max-w-[80%]">
+                          <p className="text-sm">
+                            Hello! I'm your AI assistant. You can ask me questions about your supply chain data, 
+                            upload PDF or Excel files for analysis, or request specific insights.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                <TabsContent value="dashboards" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">
+                  {/* File upload area */}
+                  <div className="rounded-lg border p-3 bg-muted/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Button variant="outline" size="sm">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-2"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        Upload PDF
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-2"
+                        >
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        Upload Excel
+                      </Button>
+                      <div className="text-xs text-muted-foreground ml-2">
+                        Supported formats: .pdf, .xlsx, .csv
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Input
+                        className="flex-1"
+                        placeholder="Type your prompt here..."
+                      />
+                      <Button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-2"
+                        >
+                          <line x1="22" y1="2" x2="11" y2="13" />
+                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        Send
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Tabs defaultValue="dashboards">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="dashboards">
                       {project.category === "Manual Testing"
                         ? "Code Editor"
                         : "Dashboards"}
-                    </h3>
-                    {project.category === "Manual Testing" ? (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleSaveFile}
-                          disabled={!selectedFile || isSaving}
-                        >
-                          <Save className="mr-2 h-4 w-4" />
-                          {isSaving ? "Saving..." : "Save"}
-                        </Button>
-                        <Button size="sm">
-                          <Play className="mr-2 h-4 w-4" /> Run
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" /> Add Dashboard
-                      </Button>
-                    )}
-                  </div>
+                    </TabsTrigger>
+                    <TabsTrigger value="charts">Charts</TabsTrigger>
+                    <TabsTrigger value="actions">Actions</TabsTrigger>
+                  </TabsList>
 
-                  {project.category === "Manual Testing" ? (
-                    <div className="rounded-lg border p-4">
-                      {selectedFile ? (
-                        <Editor
-                          height="400px"
-                          defaultLanguage="javascript"
-                          value={fileContent}
-                          onChange={(value) => setFileContent(value || "")}
-                          theme="vs-dark"
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            scrollBeyondLastLine: false,
-                            automaticLayout: true,
-                          }}
-                        />
-                      ) : (
-                        <div className="flex h-[400px] items-center justify-center text-muted-foreground">
-                          <div className="text-center">
-                            <FileText className="mx-auto h-10 w-10 opacity-20" />
-                            <p className="mt-2">
-                              Select a file from the sidebar or create a new one
-                            </p>
-                          </div>
+                  <TabsContent value="dashboards" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">
+                        {project.category === "Manual Testing"
+                          ? "Code Editor"
+                          : "Dashboards"}
+                      </h3>
+                      {project.category === "Manual Testing" ? (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleSaveFile}
+                            disabled={!selectedFile || isSaving}
+                          >
+                            <Save className="mr-2 h-4 w-4" />
+                            {isSaving ? "Saving..." : "Save"}
+                          </Button>
+                          <Button size="sm">
+                            <Play className="mr-2 h-4 w-4" /> Run
+                          </Button>
                         </div>
+                      ) : (
+                        <Button size="sm">
+                          <Plus className="mr-2 h-4 w-4" /> Add Dashboard
+                        </Button>
                       )}
                     </div>
-                  ) : (
+
+                    {project.category === "Manual Testing" ? (
+                      <div className="rounded-lg border p-4">
+                        {selectedFile ? (
+                          <Editor
+                            height="400px"
+                            defaultLanguage="javascript"
+                            value={fileContent}
+                            onChange={(value) => setFileContent(value || "")}
+                            theme="vs-dark"
+                            options={{
+                              minimap: { enabled: false },
+                              fontSize: 14,
+                              scrollBeyondLastLine: false,
+                              automaticLayout: true,
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-[400px] items-center justify-center text-muted-foreground">
+                            <div className="text-center">
+                              <FileText className="mx-auto h-10 w-10 opacity-20" />
+                              <p className="mt-2">
+                                Select a file from the sidebar or create a new one
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed p-8 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                          <BarChart3 className="h-6 w-6 text-primary" />
+                        </div>
+                        <h3 className="mt-4 font-medium">
+                          No dashboards added yet
+                        </h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Create your first dashboard to visualize your data.
+                        </p>
+                        <Button className="mt-4">
+                          <Plus className="mr-2 h-4 w-4" /> Create Dashboard
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="charts" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">Charts</h3>
+                      <Button size="sm">
+                        <Plus className="mr-2 h-4 w-4" /> Add Chart
+                      </Button>
+                    </div>
+
                     <div className="rounded-lg border border-dashed p-8 text-center">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                         <BarChart3 className="h-6 w-6 text-primary" />
                       </div>
-                      <h3 className="mt-4 font-medium">
-                        No dashboards added yet
-                      </h3>
+                      <h3 className="mt-4 font-medium">No charts added yet</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Create your first dashboard to visualize your data.
+                        Create your first chart to visualize your data.
                       </p>
                       <Button className="mt-4">
-                        <Plus className="mr-2 h-4 w-4" /> Create Dashboard
+                        <Plus className="mr-2 h-4 w-4" /> Create Chart
                       </Button>
                     </div>
-                  )}
-                </TabsContent>
+                  </TabsContent>
 
-                <TabsContent value="charts" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">Charts</h3>
-                    <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Add Chart
-                    </Button>
-                  </div>
-
-                  <div className="rounded-lg border border-dashed p-8 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      <BarChart3 className="h-6 w-6 text-primary" />
+                  <TabsContent value="actions" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">Actions</h3>
+                      <Button size="sm">
+                        <Plus className="mr-2 h-4 w-4" /> Add Action
+                      </Button>
                     </div>
-                    <h3 className="mt-4 font-medium">No charts added yet</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Create your first chart to visualize your data.
-                    </p>
-                    <Button className="mt-4">
-                      <Plus className="mr-2 h-4 w-4" /> Create Chart
-                    </Button>
-                  </div>
-                </TabsContent>
 
-                <TabsContent value="actions" className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">Actions</h3>
-                    <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Add Action
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-                          <FileText className="h-5 w-5 text-primary" />
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+                            <FileText className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Use Template</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Some text can go here explaining what a template
+                              does
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium">Use Template</h4>
-                          <p className="text-xs text-muted-foreground">
-                            Some text can go here explaining what a template
-                            does
-                          </p>
+                      </div>
+
+                      <div className="rounded-lg border p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+                            <FileText className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium">Convert Excel</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Text explaining how a user can convert an excel
+                              sheet
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-                          <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium">Convert Excel</h4>
-                          <p className="text-xs text-muted-foreground">
-                            Text explaining how a user can convert an excel
-                            sheet
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                  </TabsContent>
+                </Tabs>
+              )}
             </div>
           </div>
         </div>
