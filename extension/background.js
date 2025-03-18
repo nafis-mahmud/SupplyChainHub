@@ -157,7 +157,7 @@ function handleTokenUpdated(request, sendResponse) {
  * @returns {Promise} - Promise that resolves with user info
  */
 function fetchUserInfo(token) {
-  return fetch('http://localhost:5173/api/user/profile', {
+  return fetch('https://sqassh.netlify.app/api/user/profile', {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -651,7 +651,7 @@ function generateSeleniumScript() {
   }
   
   // Generate Python script for Selenium
-  let script = `from selenium import webdriver\nfrom selenium.webdriver.common.by import By\nfrom selenium.webdriver.common.keys import Keys\nfrom selenium.webdriver.support.ui import WebDriverWait\nfrom selenium.webdriver.support import expected_conditions as EC\nimport time\n\n`;
+  let script = `from selenium import webdriver\nfrom selenium.webdriver.common.by import By\nfrom selenium.webdriver.support.ui import WebDriverWait\nfrom selenium.webdriver.support import expected_conditions as EC\nimport time\n\n`;
   script += `# Setup Chrome driver\ndriver = webdriver.Chrome()\n\n`;
   
   // Get the URL of the first navigation action, if any
@@ -760,7 +760,7 @@ function handleSaveScriptToProject(request, sendResponse) {
   }
   
   // Make API request to save the script to the project file
-  fetch(`http://localhost:5173/api/projects/${request.projectId}/files/${request.fileId}/content`, {
+  fetch(`https://sqassh.netlify.app/api/projects/${request.projectId}/files/${request.fileId}/content`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${authToken}`,
