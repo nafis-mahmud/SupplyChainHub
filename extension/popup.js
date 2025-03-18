@@ -219,7 +219,7 @@ function fetchProjects() {
       return;
     }
     
-    if (!response || !response.success) {
+    if (!response || !response.success || !response.token) {
       const errorMsg = response && response.error ? response.error : "Unknown error";
       console.error("Failed to get token:", errorMsg);
       showError("No authentication token available. Please login or enter your token manually.");
@@ -240,9 +240,13 @@ function fetchProjects() {
     })
     .then(response => {
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        return response.text().then(text => { throw new Error(`API returned ${response.status}: ${response.statusText} - ${text}`); });
       }
-      return response.json();
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        return response.json();
+      } else {
+        throw new Error("Invalid content type received from API");
+      }
     })
     .then(data => {
       console.log("Projects fetched successfully:", data);
@@ -339,7 +343,7 @@ function fetchProjectFiles(projectId) {
     const token = response.token;
     console.log("Token retrieved, fetching files");
     
-    // Make API request to fetch project files
+    // Fetch files from the API
     fetch(`https://sqassh.netlify.app/api/projects/${projectId}/files`, {
       method: 'GET',
       headers: {
@@ -1036,46 +1040,48 @@ function clearLiveActionPanel() {
  * Handle manual token submission
  */
 function handleManualTokenSubmit() {
-  console.log("Handling manual token submission");
-  
+  console.log("Submitting token manually");
   const tokenInput = document.getElementById('token-input');
-  const token = tokenInput.value.trim();
+  const token = tokenInput ? tokenInput.value.trim() : null;
   
   if (!token) {
-    showError("Please enter a valid token");
+    showError("Please enter a valid token.");
     return;
   }
   
-  showNotification("Submitting token...");
-  
-  // Send token to background script
-  chrome.runtime.sendMessage({ 
-    action: "tokenUpdated", 
-    token: token 
-  }, function(response) {
-    if (chrome.runtime.lastError) {
-      console.error("Error submitting token:", chrome.runtime.lastError);
-      showError("Failed to submit token: " + chrome.runtime.lastError.message);
-      return;
+  // Verify token with server
+  fetch('https://sqassh.netlify.app/api/verify-token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ token })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Token verification failed: ${response.statusText}`);
     }
-    
-    if (response && response.success) {
-      console.log("Token submitted successfully");
-      showNotification("Token submitted successfully");
-      
-      // Clear the input field
-      tokenInput.value = "";
-      
-      // Update UI for authenticated state
-      updateUIForAuthenticated();
-      
-      // Fetch projects with the new token
-      fetchProjects();
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      console.log("Token verified successfully");
+      chrome.storage.local.set({ authToken: token }, function() {
+        if (chrome.runtime.lastError) {
+          console.error("Error saving token:", chrome.runtime.lastError);
+          showError("Failed to save token");
+          return;
+        }
+        showNotification("Token verified and saved successfully");
+        updateUIForAuthenticated();
+      });
     } else {
-      const errorMsg = response && response.error ? response.error : "Unknown error";
-      console.error("Failed to submit token:", errorMsg);
-      showError("Failed to submit token: " + errorMsg);
+      throw new Error("Invalid token");
     }
+  })
+  .catch(error => {
+    console.error("Error verifying token:", error);
+    showError("Token verification failed: " + error.message);
   });
 }
 
