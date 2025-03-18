@@ -3,23 +3,36 @@
 console.log("SupplyChainHub Interaction Recorder content script loaded");
 
 let isRecording = false;
+let extensionContextValid = true;
+
+// Check if extension context is valid
+function checkExtensionContext() {
+  try {
+    return chrome.runtime && chrome.runtime.id;
+  } catch (error) {
+    console.warn("Extension context is invalid:", error);
+    extensionContextValid = false;
+    return false;
+  }
+}
 
 // Initialize by sending the token to the background script if available
 (function initializeContentScript() {
   console.log("Initializing content script");
+  
+  // Check extension context first
+  if (!checkExtensionContext()) {
+    console.error("Extension context is invalid during initialization");
+    return;
+  }
+  
   setTimeout(() => {
     getAuthToken().then(token => {
       if (token) {
         console.log("Found token on page load, sending to background script");
-        chrome.runtime.sendMessage({ 
+        sendMessageToBackground({ 
           action: "tokenUpdated", 
           token 
-        }, response => {
-          if (chrome.runtime.lastError) {
-            console.error("Error sending token to background:", chrome.runtime.lastError);
-          } else {
-            console.log("Token sent to background script");
-          }
         });
       }
     }).catch(err => {
@@ -27,6 +40,31 @@ let isRecording = false;
     });
   }, 1000); // Give the page a second to load
 })();
+
+// Helper function to safely send messages to the background script
+function sendMessageToBackground(message, callback) {
+  if (!checkExtensionContext()) {
+    console.warn("Cannot send message to background, extension context is invalid");
+    if (callback) callback({ success: false, error: "Extension context invalid" });
+    return;
+  }
+  
+  try {
+    chrome.runtime.sendMessage(message, response => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending message to background:", chrome.runtime.lastError);
+        extensionContextValid = false;
+        if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+      } else {
+        if (callback) callback(response);
+      }
+    });
+  } catch (error) {
+    console.error("Error sending message to background:", error);
+    extensionContextValid = false;
+    if (callback) callback({ success: false, error: error.message });
+  }
+}
 
 // Listen for messages from the web application
 window.addEventListener('message', function(event) {
@@ -43,20 +81,16 @@ window.addEventListener('message', function(event) {
       console.log('Received auth token from web app');
       
       // Forward the token to the background script
-      try {
-        chrome.runtime.sendMessage({
-          action: 'tokenUpdated',
-          token: message.token
-        }, response => {
-          if (chrome.runtime.lastError) {
-            console.error("Error sending token to background:", chrome.runtime.lastError);
-          } else {
-            console.log("Token from web app forwarded to background script");
-          }
-        });
-      } catch (error) {
-        console.error("Error forwarding token to background script:", error);
-      }
+      sendMessageToBackground({
+        action: 'tokenUpdated',
+        token: message.token
+      }, response => {
+        if (response && response.success) {
+          console.log("Token from web app forwarded to background script successfully");
+        } else {
+          console.error("Failed to forward token to background script:", response ? response.error : "Unknown error");
+        }
+      });
     }
   }
 });
@@ -64,6 +98,9 @@ window.addEventListener('message', function(event) {
 // Listen for messages from the extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Content script received message:", request.action);
+  
+  // Update extension context status
+  extensionContextValid = true;
   
   switch (request.action) {
     case "getToken":
@@ -91,6 +128,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       stopRecording();
       sendResponse({ success: true });
       break;
+      
+    case "authStateChanged":
+      // Handle auth state changes from background script
+      console.log("Auth state changed:", request.isAuthenticated);
+      sendResponse({ success: true });
+      break;
   }
 });
 
@@ -99,57 +142,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  * @returns {Promise<string>} The authentication token or null
  */
 async function getAuthToken() {
-  console.log("Getting auth token from localStorage");
-  
   try {
-    // First try to get it directly from localStorage
+    // Get token from localStorage
     const token = localStorage.getItem('authToken');
     
-    if (token) {
-      console.log("Token found in localStorage");
-      return token;
+    if (!token) {
+      console.log("No auth token found in localStorage");
+      return null;
     }
     
-    // If not found, try to request it from the web app
-    console.log("Token not found in localStorage, requesting from web app");
-    return new Promise((resolve, reject) => {
-      try {
-        // Send a message to the web app
-        window.postMessage({ 
-          source: "extension-content-script", 
-          action: "getAuthToken" 
-        }, "*");
-        
-        // Set up a listener for the response
-        const messageListener = (event) => {
-          // Ensure the message is from our web app
-          if (event.source !== window || !event.data || event.data.source !== "extension-bridge") {
-            return;
-          }
-          
-          if (event.data.action === "authTokenResponse") {
-            console.log("Received token response from web app");
-            // Remove the listener
-            window.removeEventListener("message", messageListener);
-            // Resolve with the token
-            resolve(event.data.token);
-          }
-        };
-        
-        // Add the listener
-        window.addEventListener("message", messageListener);
-        
-        // Set a timeout to resolve with null if no response
-        setTimeout(() => {
-          window.removeEventListener("message", messageListener);
-          console.log("No token response received from web app");
-          resolve(null);
-        }, 2000);
-      } catch (error) {
-        console.error("Error requesting token:", error);
-        reject(error);
-      }
-    });
+    return token;
   } catch (error) {
     console.error("Error in getAuthToken:", error);
     return null;
@@ -167,6 +169,17 @@ function startRecording() {
   document.addEventListener('click', handleClick, true);
   document.addEventListener('input', handleInput, true);
   document.addEventListener('change', handleChange, true);
+  
+  // Visual indicator that recording is active
+  showRecordingIndicator();
+  
+  // Log a test action to verify the recording pipeline
+  console.log("Testing recording pipeline...");
+  setTimeout(() => {
+    if (isRecording) {
+      recordAction('test', 'TEST', 'test-selector', 'test-value');
+    }
+  }, 1000);
 }
 
 /**
@@ -180,6 +193,47 @@ function stopRecording() {
   document.removeEventListener('click', handleClick, true);
   document.removeEventListener('input', handleInput, true);
   document.removeEventListener('change', handleChange, true);
+  
+  // Remove visual indicator
+  hideRecordingIndicator();
+}
+
+/**
+ * Show a visual indicator that recording is active
+ */
+function showRecordingIndicator() {
+  // Create or show the recording indicator
+  let indicator = document.getElementById('supply-chain-hub-recording-indicator');
+  
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'supply-chain-hub-recording-indicator';
+    indicator.style.position = 'fixed';
+    indicator.style.top = '10px';
+    indicator.style.right = '10px';
+    indicator.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+    indicator.style.color = 'white';
+    indicator.style.padding = '5px 10px';
+    indicator.style.borderRadius = '5px';
+    indicator.style.zIndex = '9999';
+    indicator.style.fontFamily = 'Arial, sans-serif';
+    indicator.style.fontSize = '12px';
+    indicator.style.fontWeight = 'bold';
+    indicator.textContent = 'Recording...';
+    document.body.appendChild(indicator);
+  } else {
+    indicator.style.display = 'block';
+  }
+}
+
+/**
+ * Hide the recording indicator
+ */
+function hideRecordingIndicator() {
+  const indicator = document.getElementById('supply-chain-hub-recording-indicator');
+  if (indicator) {
+    indicator.style.display = 'none';
+  }
 }
 
 /**
@@ -198,6 +252,8 @@ function handleClick(event) {
     
     console.log("Recording click:", { locatorType, selector });
     recordAction('click', locatorType, selector);
+  } else {
+    console.log("Click on non-interactive element, not recording:", element);
   }
 }
 
@@ -271,7 +327,9 @@ function isInteractiveElement(element) {
   }
   
   // Elements with common interactive classes (approximation)
-  const classNames = element.className.split(' ');
+  const classNames = typeof element.className === 'string' 
+    ? element.className.split(' ') 
+    : (element.classList ? Array.from(element.classList) : []);
   if (classNames.some(cls => /btn|button|clickable|link|nav-item|menu-item/.test(cls))) {
     return true;
   }
@@ -424,25 +482,92 @@ function getLocatorType(element, selector) {
  * @param {string} value - The value (for input actions)
  */
 function recordAction(type, locator, selector, value = '') {
+  console.log(`Attempting to record action: ${type} on ${selector} with value: ${value}`);
+  
   try {
-    // Check if extension context is still valid before sending message
-    if (chrome.runtime && chrome.runtime.id) {
-      chrome.runtime.sendMessage({
-        action: 'recordAction',
-        type,
-        locator,
-        selector,
-        value
-      }, response => {
-        if (chrome.runtime.lastError) {
-          console.error("Error recording action:", chrome.runtime.lastError);
-        }
-      });
-    } else {
-      console.warn("Extension context is no longer valid, can't send recordAction message");
+    // Check if we're recording and extension context is valid
+    if (!isRecording) {
+      console.warn("Not recording action because recording is not active");
+      return;
     }
+    
+    if (!extensionContextValid) {
+      console.warn("Not recording action because extension context is invalid");
+      return;
+    }
+    
+    const message = {
+      action: 'recordAction',
+      type,
+      locator,
+      selector,
+      value,
+      url: window.location.href // Include the current URL
+    };
+    
+    console.log("Sending recordAction message to background:", message);
+    
+    sendMessageToBackground(message, response => {
+      if (!response || !response.success) {
+        console.error("Failed to record action:", response ? response.error : "Unknown error");
+      } else {
+        console.log(`Action recorded successfully. Total actions: ${response.actionCount || 'unknown'}`);
+        
+        // Show a visual feedback that the action was recorded
+        showActionRecordedFeedback(selector);
+      }
+    });
   } catch (error) {
     console.error("Error sending recordAction message:", error);
+  }
+}
+
+/**
+ * Show visual feedback that an action was recorded
+ * @param {string} selector - The selector of the element
+ */
+function showActionRecordedFeedback(selector) {
+  try {
+    // Try to find the element
+    let element;
+    try {
+      element = document.querySelector(selector);
+    } catch (error) {
+      console.log("Could not find element with selector:", selector);
+      return;
+    }
+    
+    if (!element) return;
+    
+    // Create a temporary overlay
+    const overlay = document.createElement('div');
+    overlay.style.position = 'absolute';
+    overlay.style.border = '2px solid rgba(255, 0, 0, 0.7)';
+    overlay.style.borderRadius = '3px';
+    overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.2)';
+    overlay.style.pointerEvents = 'none';
+    overlay.style.zIndex = '9999';
+    overlay.style.transition = 'opacity 0.5s ease-out';
+    
+    // Position the overlay
+    const rect = element.getBoundingClientRect();
+    overlay.style.top = `${rect.top + window.scrollY}px`;
+    overlay.style.left = `${rect.left + window.scrollX}px`;
+    overlay.style.width = `${rect.width}px`;
+    overlay.style.height = `${rect.height}px`;
+    
+    // Add to document
+    document.body.appendChild(overlay);
+    
+    // Fade out and remove
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(overlay);
+      }, 500);
+    }, 500);
+  } catch (error) {
+    console.error("Error showing action recorded feedback:", error);
   }
 }
 

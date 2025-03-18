@@ -129,14 +129,20 @@ function handleCheckAuth(sendResponse) {
       // Try to extract user data from token
       let userData = null;
       try {
-        // Our token is a simple base64-encoded JSON string, not a JWT
+        // Our token is a base64-encoded JSON string, not a JWT
         const payload = JSON.parse(atob(authToken));
         userData = {
           email: payload.email || "Unknown",
           role: payload.role || "User"
         };
+        console.log("Decoded user data:", userData);
       } catch (error) {
         console.error("Error decoding token:", error);
+        // Token might not be in expected format
+        userData = {
+          email: "Error decoding token",
+          role: "Unknown"
+        };
       }
       
       sendResponse({
@@ -203,10 +209,12 @@ function handleStartRecording(sendResponse) {
       return;
     }
     
+    // Set recording state
     isRecording = true;
     
-    // Clear previous recordings
+    // Clear previous recordings to ensure a fresh start
     recordedActions = [];
+    console.log("Previous recorded actions cleared, starting fresh recording");
     
     // Update extension icon
     updateExtensionIcon();
@@ -215,12 +223,21 @@ function handleStartRecording(sendResponse) {
     chrome.tabs.query({}, function(tabs) {
       for (let tab of tabs) {
         try {
-          chrome.tabs.sendMessage(tab.id, { action: "startRecording" });
+          chrome.tabs.sendMessage(tab.id, { action: "startRecording" }, function(response) {
+            // Ignore chrome.runtime.lastError to prevent console errors for tabs without content script
+            const error = chrome.runtime.lastError;
+            if (error) {
+              console.log(`Tab ${tab.id} does not have content script or had an error:`, error.message);
+            }
+          });
         } catch (error) {
           console.error(`Error sending startRecording to tab ${tab.id}:`, error);
         }
       }
     });
+    
+    // Notify popup about recording state change
+    notifyPopupRecordingStateChanged();
     
     sendResponse({ success: true });
   } catch (error) {
@@ -246,12 +263,21 @@ function handleStopRecording(sendResponse) {
     chrome.tabs.query({}, function(tabs) {
       for (let tab of tabs) {
         try {
-          chrome.tabs.sendMessage(tab.id, { action: "stopRecording" });
+          chrome.tabs.sendMessage(tab.id, { action: "stopRecording" }, function(response) {
+            // Ignore chrome.runtime.lastError to prevent console errors for tabs without content script
+            const error = chrome.runtime.lastError;
+            if (error) {
+              console.log(`Tab ${tab.id} does not have content script or had an error:`, error.message);
+            }
+          });
         } catch (error) {
           console.error(`Error sending stopRecording to tab ${tab.id}:`, error);
         }
       }
     });
+    
+    // Notify popup about recording state change
+    notifyPopupRecordingStateChanged();
     
     sendResponse({ 
       success: true, 
@@ -278,21 +304,32 @@ function handleRecordAction(request, sendResponse) {
       return;
     }
     
-    // Add timestamp
+    // Add timestamp and additional metadata
     const action = {
       type: request.type,
       locator: request.locator,
       selector: request.selector,
       value: request.value,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: request.url || "unknown"
     };
     
     // Add to recorded actions
     recordedActions.push(action);
     
-    console.log("Recorded action:", action);
+    console.log(`Recorded action: ${action.type} on ${action.selector}. Total actions: ${recordedActions.length}`);
     
-    sendResponse({ success: true, actionCount: recordedActions.length });
+    // Update extension icon to show recording is active
+    updateExtensionIcon();
+    
+    // Notify popup about the new action
+    notifyPopupActionRecorded(action);
+    
+    sendResponse({ 
+      success: true, 
+      actionCount: recordedActions.length,
+      lastAction: action
+    });
   } catch (error) {
     console.error("Error handling record action:", error);
     sendResponse({ success: false, error: error.message });
@@ -326,12 +363,54 @@ function handleClearRecordedActions(sendResponse) {
   console.log("Handling clear recorded actions");
   
   try {
+    // Clear recorded actions array
     recordedActions = [];
+    console.log("Recorded actions cleared, new length:", recordedActions.length);
+    
+    // Notify popup about the change
+    notifyPopupRecordingStateChanged();
     
     sendResponse({ success: true });
   } catch (error) {
     console.error("Error handling clear recorded actions:", error);
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Notify popup about a new recorded action
+ * @param {object} action - The recorded action
+ */
+function notifyPopupActionRecorded(action) {
+  try {
+    chrome.runtime.sendMessage({
+      action: "actionRecorded",
+      lastAction: action,
+      actionCount: recordedActions.length
+    }, function(response) {
+      // Ignore chrome.runtime.lastError to prevent console errors when popup is not open
+      const error = chrome.runtime.lastError;
+    });
+  } catch (error) {
+    console.error("Error notifying popup about recorded action:", error);
+  }
+}
+
+/**
+ * Notify popup about recording state change
+ */
+function notifyPopupRecordingStateChanged() {
+  try {
+    chrome.runtime.sendMessage({
+      action: "recordingStateChanged",
+      isRecording: isRecording,
+      recordedActions: recordedActions
+    }, function(response) {
+      // Ignore chrome.runtime.lastError to prevent console errors when popup is not open
+      const error = chrome.runtime.lastError;
+    });
+  } catch (error) {
+    console.error("Error notifying popup about recording state change:", error);
   }
 }
 
@@ -385,7 +464,7 @@ function notifyAuthStateChanged() {
     
     if (isAuthenticated && authToken) {
       try {
-        // Our token is a simple base64-encoded JSON string, not a JWT
+        // Our token is a base64-encoded JSON string, not a JWT
         const payload = JSON.parse(atob(authToken));
         userData = {
           email: payload.email || "Unknown",
@@ -404,6 +483,12 @@ function notifyAuthStateChanged() {
             action: "authStateChanged",
             isAuthenticated: isAuthenticated,
             userData: userData
+          }, function(response) {
+            // Ignore chrome.runtime.lastError to prevent console errors for tabs without content script
+            const error = chrome.runtime.lastError;
+            if (error) {
+              console.log(`Tab ${tab.id} does not have content script or had an error:`, error.message);
+            }
           });
         } catch (error) {
           console.error(`Error notifying tab ${tab.id}:`, error);

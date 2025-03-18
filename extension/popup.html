@@ -117,6 +117,47 @@
       border-radius: 4px;
       margin-bottom: 10px;
     }
+    .live-actions-panel {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 100px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .empty-message {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    .action-item {
+      border-bottom: 1px solid #eee;
+      padding: 8px 0;
+      margin-bottom: 8px;
+    }
+    .action-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .action-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .action-type {
+      font-weight: bold;
+      color: #2563eb;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    .action-time {
+      color: #666;
+      font-size: 12px;
+    }
+    .action-details {
+      font-size: 13px;
+      word-break: break-word;
+    }
   </style>
 </head>
 <body>
@@ -157,10 +198,18 @@
         </div>
       </div>
       
+      <!-- Live Action Panel -->
+      <div class="section">
+        <div class="section-title">Live Actions</div>
+        <div id="live-actions-panel" class="live-actions-panel">
+          <div class="empty-message">No actions recorded yet</div>
+        </div>
+      </div>
+      
       <div class="section">
         <div class="button-group">
-          <button id="start-recording" class="button">Start Recording</button>
-          <button id="stop-recording" class="button" disabled>Stop Recording</button>
+          <button id="start-recording-button" class="button">Start Recording</button>
+          <button id="stop-recording-button" class="button" disabled>Stop Recording</button>
         </div>
         <div class="button-group">
           <button id="generate-script" class="button secondary">Generate Script</button>
