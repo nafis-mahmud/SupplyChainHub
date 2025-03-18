@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const saveToProjectButton = document.getElementById('save-to-project');
   const projectDropdown = document.getElementById('projectDropdown');
   const fileDropdown = document.getElementById('fileDropdown');
+  const submitTokenButton = document.getElementById('submit-token-button');
+  const tokenInput = document.getElementById('token-input');
   
   // Initialize UI state
   initializePopup();
@@ -26,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (generateScriptButton) generateScriptButton.addEventListener('click', handleGenerateScript);
   if (saveToProjectButton) saveToProjectButton.addEventListener('click', handleSaveScriptToProject);
   if (projectDropdown) projectDropdown.addEventListener('change', handleProjectChange);
+  if (submitTokenButton) submitTokenButton.addEventListener('click', handleManualTokenSubmit);
   
   // Fetch projects when popup opens
   if (projectDropdown) {
@@ -69,6 +72,8 @@ function setupUIElements() {
     const errorMessage = document.getElementById('error-message');
     const projectDropdown = document.getElementById('projectDropdown');
     const fileDropdown = document.getElementById('fileDropdown');
+    const tokenInput = document.getElementById('token-input');
+    const submitTokenButton = document.getElementById('submit-token-button');
     
     if (!authSection) {
       console.error("Auth section not found");
@@ -96,6 +101,14 @@ function setupUIElements() {
     
     if (!fileDropdown) {
       console.error("File dropdown not found");
+    }
+    
+    if (!tokenInput) {
+      console.error("Token input not found");
+    }
+    
+    if (!submitTokenButton) {
+      console.error("Submit token button not found");
     }
     
     // Initially hide recording section and user info
@@ -170,6 +183,14 @@ function setupEventListeners() {
     } else {
       console.error("Clear recording button not found");
     }
+    
+    // Submit token button
+    const submitTokenButton = document.getElementById('submit-token-button');
+    if (submitTokenButton) {
+      submitTokenButton.addEventListener('click', handleManualTokenSubmit);
+    } else {
+      console.error("Submit token button not found");
+    }
   } catch (error) {
     console.error("Error setting up event listeners:", error);
     showError("Failed to set up event handlers");
@@ -181,185 +202,116 @@ function setupEventListeners() {
  */
 function fetchProjects() {
   console.log("Fetching projects");
-  showNotification("Loading projects...");
   
-  // Add a loading indicator to the project dropdown
+  // Show loading state
   const projectDropdown = document.getElementById('projectDropdown');
   if (projectDropdown) {
     projectDropdown.disabled = true;
-    const loadingOption = document.createElement('option');
-    loadingOption.textContent = 'Loading projects...';
-    loadingOption.value = '';
-    projectDropdown.innerHTML = '';
-    projectDropdown.appendChild(loadingOption);
+    projectDropdown.innerHTML = '<option value="">Loading projects...</option>';
   }
   
-  // Get token from background script with retry
-  getTokenWithRetry(3)
-    .then(token => {
-      console.log("Token retrieved successfully, fetching projects");
-      
-      // Make API request to fetch projects
-      const apiUrl = 'https://sqassh.netlify.app/api/projects';
-      console.log("Fetching from URL:", apiUrl);
-      
-      return fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+  // Get the token
+  chrome.runtime.sendMessage({ action: "getToken" }, function(response) {
+    if (chrome.runtime.lastError) {
+      console.error("Error getting token:", chrome.runtime.lastError);
+      showError("Failed to get authentication token: " + chrome.runtime.lastError.message);
+      resetProjectDropdown();
+      return;
+    }
+    
+    if (!response || !response.success) {
+      const errorMsg = response && response.error ? response.error : "Unknown error";
+      console.error("Failed to get token:", errorMsg);
+      showError("No authentication token available. Please login or enter your token manually.");
+      resetProjectDropdown();
+      return;
+    }
+    
+    const token = response.token;
+    console.log("Token retrieved successfully, fetching projects");
+    
+    // Fetch projects from the API
+    fetch('https://sqassh.netlify.app/api/projects', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
     .then(response => {
-      console.log("API response status:", response.status);
-      
-      // Check if the response is OK
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
       }
-      
-      // Check the content type to ensure it's JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
-      
-      return response.json().catch(error => {
-        console.error("Error parsing JSON:", error);
-        throw new Error("The API returned an invalid JSON response. Is the API server running correctly?");
-      });
+      return response.json();
     })
     .then(data => {
-      console.log("Projects data received:", data);
-      populateProjectDropdown(data);
-      showNotification("Projects loaded");
+      console.log("Projects fetched successfully:", data);
+      
+      if (!data || !Array.isArray(data)) {
+        throw new Error("Invalid data format received from API");
+      }
+      
+      // Update the project dropdown
+      updateProjectDropdown(data);
     })
     .catch(error => {
       console.error("Error fetching projects:", error);
-      
-      let errorMessage = error.message;
-      
-      // Check if this is a network error (API server not running)
-      if (error.message.includes('Failed to fetch') || 
-          error.message.includes('NetworkError') ||
-          error.message.includes('Unexpected token')) {
-        errorMessage = "Could not connect to the API server. Please ensure the server is running at http://localhost:5173";
-      }
-      
-      showNotification("Error loading projects: " + errorMessage, true);
-      
-      // Reset project dropdown on error
-      if (projectDropdown) {
-        projectDropdown.disabled = false;
-        const errorOption = document.createElement('option');
-        errorOption.textContent = 'Error loading projects';
-        errorOption.value = '';
-        projectDropdown.innerHTML = '';
-        projectDropdown.appendChild(errorOption);
-      }
+      showError("Failed to fetch projects: " + error.message);
+      resetProjectDropdown();
     });
-}
-
-/**
- * Get token with retry logic
- * @param {number} maxRetries - Maximum number of retry attempts
- * @returns {Promise<string>} - Promise that resolves with the token
- */
-function getTokenWithRetry(maxRetries = 3) {
-  return new Promise((resolve, reject) => {
-    let retryCount = 0;
-    
-    function attemptGetToken() {
-      chrome.runtime.sendMessage({ action: "getToken" }, function(response) {
-        if (chrome.runtime.lastError) {
-          const error = chrome.runtime.lastError;
-          console.error("Error getting token:", error);
-          
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`Retrying token retrieval (${retryCount}/${maxRetries})...`);
-            setTimeout(attemptGetToken, 500 * retryCount); // Exponential backoff
-          } else {
-            reject(new Error("Failed to get token after multiple attempts"));
-          }
-          return;
-        }
-        
-        console.log("Token response:", response ? "Response received" : "No response", 
-                    response && response.success ? "Success" : "Failed",
-                    response && response.token ? "Token exists" : "No token");
-        
-        if (!response || !response.success || !response.token) {
-          const errorMsg = response && response.error ? response.error : "No token available";
-          console.error(errorMsg);
-          
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(`Retrying token retrieval (${retryCount}/${maxRetries})...`);
-            setTimeout(attemptGetToken, 500 * retryCount); // Exponential backoff
-          } else {
-            reject(new Error(errorMsg));
-          }
-        } else {
-          resolve(response.token);
-        }
-      });
-    }
-    
-    attemptGetToken();
   });
 }
 
 /**
- * Populate the project dropdown with fetched projects
- * @param {Array} projects - List of projects
+ * Update the project dropdown with fetched projects
+ * @param {Array} projects - The projects to display
  */
-function populateProjectDropdown(projects) {
+function updateProjectDropdown(projects) {
   const projectDropdown = document.getElementById('projectDropdown');
-  if (!projectDropdown) return;
-  
-  // Clear existing options except the default one
-  while (projectDropdown.options.length > 1) {
-    projectDropdown.remove(1);
-  }
-  
-  // Add projects to dropdown
-  projects.forEach(project => {
-    const option = document.createElement('option');
-    option.value = project.id;
-    option.textContent = project.name;
-    projectDropdown.appendChild(option);
-  });
-  
-  // Enable dropdown
-  projectDropdown.disabled = false;
-}
-
-/**
- * Handle project selection change
- */
-function handleProjectChange() {
-  const projectDropdown = document.getElementById('projectDropdown');
-  const fileDropdown = document.getElementById('fileDropdown');
-  
-  if (!projectDropdown || !fileDropdown) return;
-  
-  const projectId = projectDropdown.value;
-  
-  // Reset file dropdown
-  while (fileDropdown.options.length > 1) {
-    fileDropdown.remove(1);
-  }
-  
-  // Disable file dropdown if no project selected
-  if (!projectId || projectId === "") {
-    fileDropdown.disabled = true;
+  if (!projectDropdown) {
+    console.error("Project dropdown not found");
     return;
   }
   
-  // Fetch files for the selected project
-  fetchProjectFiles(projectId);
+  // Clear existing options
+  projectDropdown.innerHTML = '';
+  
+  // Add default option
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = '-- Select a project --';
+  projectDropdown.appendChild(defaultOption);
+  
+  // Add projects
+  if (projects && projects.length > 0) {
+    projects.forEach(project => {
+      const option = document.createElement('option');
+      option.value = project.id;
+      option.textContent = project.name;
+      projectDropdown.appendChild(option);
+    });
+    
+    // Enable the dropdown
+    projectDropdown.disabled = false;
+  } else {
+    // No projects found
+    const noProjectsOption = document.createElement('option');
+    noProjectsOption.value = '';
+    noProjectsOption.textContent = 'No projects found';
+    projectDropdown.appendChild(noProjectsOption);
+    projectDropdown.disabled = true;
+  }
+}
+
+/**
+ * Reset the project dropdown to its initial state
+ */
+function resetProjectDropdown() {
+  const projectDropdown = document.getElementById('projectDropdown');
+  if (projectDropdown) {
+    projectDropdown.innerHTML = '<option value="">-- Select a project --</option>';
+    projectDropdown.disabled = true;
+  }
 }
 
 /**
@@ -438,13 +390,47 @@ function populateFileDropdown(files) {
 }
 
 /**
+ * Handle project selection change
+ */
+function handleProjectChange() {
+  const projectDropdown = document.getElementById('projectDropdown');
+  const fileDropdown = document.getElementById('fileDropdown');
+  
+  if (!projectDropdown || !fileDropdown) return;
+  
+  const projectId = projectDropdown.value;
+  
+  // Reset file dropdown
+  while (fileDropdown.options.length > 1) {
+    fileDropdown.remove(1);
+  }
+  
+  // Disable file dropdown if no project selected
+  if (!projectId || projectId === "") {
+    fileDropdown.disabled = true;
+    return;
+  }
+  
+  // Fetch files for the selected project
+  fetchProjectFiles(projectId);
+}
+
+/**
  * Check authentication status
  */
 function checkAuthStatus() {
   console.log("Checking authentication status");
   
-  getTokenWithRetry(2)
-    .then(token => {
+  chrome.runtime.sendMessage({ action: "getToken" }, function(response) {
+    if (chrome.runtime.lastError) {
+      console.error("Error checking authentication status:", chrome.runtime.lastError);
+      return;
+    }
+    
+    if (!response || !response.success || !response.token) {
+      console.log("User is not authenticated");
+      updateUIForUnauthenticated();
+    } else {
       console.log("User is authenticated");
       updateUIForAuthenticated();
       
@@ -453,11 +439,8 @@ function checkAuthStatus() {
       if (projectDropdown) {
         fetchProjects();
       }
-    })
-    .catch(error => {
-      console.log("User is not authenticated:", error.message);
-      updateUIForUnauthenticated();
-    });
+    }
+  });
 }
 
 /**
@@ -1047,6 +1030,53 @@ function clearLiveActionPanel() {
   } catch (error) {
     console.error("Error clearing live action panel:", error);
   }
+}
+
+/**
+ * Handle manual token submission
+ */
+function handleManualTokenSubmit() {
+  console.log("Handling manual token submission");
+  
+  const tokenInput = document.getElementById('token-input');
+  const token = tokenInput.value.trim();
+  
+  if (!token) {
+    showError("Please enter a valid token");
+    return;
+  }
+  
+  showNotification("Submitting token...");
+  
+  // Send token to background script
+  chrome.runtime.sendMessage({ 
+    action: "tokenUpdated", 
+    token: token 
+  }, function(response) {
+    if (chrome.runtime.lastError) {
+      console.error("Error submitting token:", chrome.runtime.lastError);
+      showError("Failed to submit token: " + chrome.runtime.lastError.message);
+      return;
+    }
+    
+    if (response && response.success) {
+      console.log("Token submitted successfully");
+      showNotification("Token submitted successfully");
+      
+      // Clear the input field
+      tokenInput.value = "";
+      
+      // Update UI for authenticated state
+      updateUIForAuthenticated();
+      
+      // Fetch projects with the new token
+      fetchProjects();
+    } else {
+      const errorMsg = response && response.error ? response.error : "Unknown error";
+      console.error("Failed to submit token:", errorMsg);
+      showError("Failed to submit token: " + errorMsg);
+    }
+  });
 }
 
 // Listen for messages from background script

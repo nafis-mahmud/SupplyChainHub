@@ -51,6 +51,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       handleCheckAuth(sendResponse);
       break;
       
+    case "getToken":
+      handleGetToken(request, sendResponse);
+      break;
+      
     case "logout":
       handleLogout(sendResponse);
       break;
@@ -100,74 +104,63 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   return true;
 });
 
-// Listen for messages from external web pages (like our deployed app)
-chrome.runtime.onMessageExternal.addListener(function(request, sender, sendResponse) {
-  console.log("Background received external message:", request);
-  
-  // Verify the sender is our web app
-  if (sender.url && (
-      sender.url.startsWith('https://sqassh.netlify.app') || 
-      sender.url.startsWith('http://localhost:5173'))) {
-    
-    if (request.action === "setAuthToken") {
-      console.log("Received auth token from web app");
-      handleTokenUpdate(request.token, sendResponse);
-      return true; // Keep the message channel open for async response
-    }
-  } else {
-    console.warn("Received message from unauthorized external source:", sender.url);
-    sendResponse({ success: false, error: "Unauthorized source" });
-  }
-  
-  return true; // Keep the message channel open for async response
-});
-
 /**
  * Handle token updated message
  * @param {Object} request - The request object
  * @param {function} sendResponse - Function to send response back to popup
  */
 function handleTokenUpdated(request, sendResponse) {
-  console.log("Token updated");
+  console.log("Handling token updated message");
   
   if (!request.token) {
-    console.error("No token provided in token update");
+    console.error("No token provided in token update message");
     sendResponse({ success: false, error: "No token provided" });
     return;
   }
   
-  // Store token in memory
-  authToken = request.token;
-  
-  // Store token in chrome.storage.local
-  chrome.storage.local.set({ authToken: request.token }, function() {
-    if (chrome.runtime.lastError) {
-      console.error("Error storing token:", chrome.runtime.lastError);
-      sendResponse({ success: false, error: "Failed to store token" });
-      return;
-    }
+  try {
+    // Store the token
+    authToken = request.token;
+    isAuthenticated = true;
     
-    console.log("Token stored successfully");
-    
-    // Get user info with the token
-    fetchUserInfo(request.token)
-      .then(userInfo => {
-        // Store user info
-        chrome.storage.local.set({ userInfo: userInfo }, function() {
-          if (chrome.runtime.lastError) {
-            console.error("Error storing user info:", chrome.runtime.lastError);
-          } else {
-            console.log("User info stored successfully");
-          }
+    // Save to storage
+    chrome.storage.local.set({ authToken: request.token }, function() {
+      if (chrome.runtime.lastError) {
+        console.error("Error storing token:", chrome.runtime.lastError);
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      
+      console.log("Token stored successfully");
+      
+      // Fetch user info with the new token
+      fetchUserInfo(request.token)
+        .then(userData => {
+          console.log("User info fetched successfully:", userData);
           
-          sendResponse({ success: true, userInfo });
+          // Update extension icon
+          updateExtensionIcon();
+          
+          // Notify all tabs about the auth state change
+          notifyAuthStateChanged(userData);
+          
+          sendResponse({ success: true, userData: userData });
+        })
+        .catch(error => {
+          console.error("Error fetching user info:", error);
+          
+          // Even if we couldn't fetch user info, the token might still be valid
+          // So we still update the auth state and icon
+          updateExtensionIcon();
+          notifyAuthStateChanged();
+          
+          sendResponse({ success: true });
         });
-      })
-      .catch(error => {
-        console.error("Error fetching user info:", error);
-        sendResponse({ success: true }); // Still consider token update successful
-      });
-  });
+    });
+  } catch (error) {
+    console.error("Error handling token update:", error);
+    sendResponse({ success: false, error: error.message });
+  }
   
   // Return true to indicate we'll respond asynchronously
   return true;
