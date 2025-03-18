@@ -74,6 +74,28 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   return true;
 });
 
+// Listen for messages from external web pages (like our deployed app)
+chrome.runtime.onMessageExternal.addListener(function(request, sender, sendResponse) {
+  console.log("Background received external message:", request);
+  
+  // Verify the sender is our web app
+  if (sender.url && (
+      sender.url.startsWith('https://sqassh.netlify.app') || 
+      sender.url.startsWith('http://localhost:5173'))) {
+    
+    if (request.action === "setAuthToken") {
+      console.log("Received auth token from web app");
+      handleTokenUpdate(request.token, sendResponse);
+      return true; // Keep the message channel open for async response
+    }
+  } else {
+    console.warn("Received message from unauthorized external source:", sender.url);
+    sendResponse({ success: false, error: "Unauthorized source" });
+  }
+  
+  return true; // Keep the message channel open for async response
+});
+
 /**
  * Handle token update from web app
  * @param {string} token - The authentication token

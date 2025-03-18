@@ -11,7 +11,8 @@
   ],
   "host_permissions": [
     "*://*.supplychainhub.com/*",
-    "http://localhost:*/*"
+    "http://localhost:*/*",
+    "https://sqassh.netlify.app/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,7 +21,8 @@
     {
       "matches": [
         "*://*.supplychainhub.com/*",
-        "http://localhost:*/*"
+        "http://localhost:*/*",
+        "https://sqassh.netlify.app/*"
       ],
       "js": ["content.js"],
       "run_at": "document_start"
@@ -38,6 +40,12 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "externally_connectable": {
+    "matches": [
+      "https://sqassh.netlify.app/*",
+      "http://localhost:*/*"
+    ]
   },
   "manifest_version": 3
 }
