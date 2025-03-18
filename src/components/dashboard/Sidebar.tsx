@@ -7,6 +7,7 @@ import {
   Users,
   FileText,
   HelpCircle,
+  Key,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { LogoutButton } from "./LogoutButton";
@@ -86,6 +87,12 @@ export function Sidebar() {
             label="Settings"
             href="/settings"
             active={pathname.startsWith("/settings")}
+          />
+          <SidebarItem
+            icon={<Key className="h-4 w-4" />}
+            label="Extension Token"
+            href="/extension-token"
+            active={pathname.startsWith("/extension-token")}
           />
         </nav>
       </div>

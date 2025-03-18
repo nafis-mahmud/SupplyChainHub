@@ -12,6 +12,7 @@ import routes from "tempo-routes";
 import { ProjectDetail } from "./components/dashboard/ProjectDetail";
 import AuthGuard from "./components/auth/AuthGuard";
 import ExtensionBridge from "./components/auth/ExtensionBridge";
+import TokenDisplayPage from "./components/auth/TokenDisplayPage";
 
 // Lazy load components
 const LandingPage = lazy(() => import("./components/landing/LandingPage"));
@@ -172,6 +173,14 @@ function App() {
             element={
               <AuthGuard>
                 <Home />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/extension-token"
+            element={
+              <AuthGuard>
+                <TokenDisplayPage />
               </AuthGuard>
             }
           />
