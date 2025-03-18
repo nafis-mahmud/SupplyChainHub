@@ -3,8 +3,37 @@
 document.addEventListener('DOMContentLoaded', function() {
   console.log("Popup DOM loaded");
   
-  // Initialize the popup UI
+  // Get DOM elements
+  const loginButton = document.getElementById('login-button');
+  const logoutButton = document.getElementById('logout-button');
+  const startRecordingButton = document.getElementById('start-recording-button');
+  const stopRecordingButton = document.getElementById('stop-recording-button');
+  const clearRecordingButton = document.getElementById('clear-recording');
+  const generateScriptButton = document.getElementById('generate-script');
+  const saveToProjectButton = document.getElementById('save-to-project');
+  const projectDropdown = document.getElementById('projectDropdown');
+  const fileDropdown = document.getElementById('fileDropdown');
+  
+  // Initialize UI state
   initializePopup();
+  
+  // Add event listeners
+  if (loginButton) loginButton.addEventListener('click', navigateToLogin);
+  if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+  if (startRecordingButton) startRecordingButton.addEventListener('click', startRecording);
+  if (stopRecordingButton) stopRecordingButton.addEventListener('click', stopRecording);
+  if (clearRecordingButton) clearRecordingButton.addEventListener('click', clearRecording);
+  if (generateScriptButton) generateScriptButton.addEventListener('click', handleGenerateScript);
+  if (saveToProjectButton) saveToProjectButton.addEventListener('click', handleSaveScriptToProject);
+  if (projectDropdown) projectDropdown.addEventListener('change', handleProjectChange);
+  
+  // Fetch projects when popup opens
+  if (projectDropdown) {
+    fetchProjects();
+  }
+  
+  // Check for authentication status
+  checkAuthStatus();
 });
 
 /**
@@ -16,9 +45,6 @@ function initializePopup() {
   try {
     // Set up UI elements
     setupUIElements();
-    
-    // Check authentication status
-    checkAuthStatus();
     
     // Set up event listeners
     setupEventListeners();
@@ -41,6 +67,8 @@ function setupUIElements() {
     const userInfoSection = document.getElementById('user-info');
     const notification = document.getElementById('notification');
     const errorMessage = document.getElementById('error-message');
+    const projectDropdown = document.getElementById('projectDropdown');
+    const fileDropdown = document.getElementById('fileDropdown');
     
     if (!authSection) {
       console.error("Auth section not found");
@@ -62,6 +90,14 @@ function setupUIElements() {
       console.error("Error message element not found");
     }
     
+    if (!projectDropdown) {
+      console.error("Project dropdown not found");
+    }
+    
+    if (!fileDropdown) {
+      console.error("File dropdown not found");
+    }
+    
     // Initially hide recording section and user info
     if (recordingSection) recordingSection.style.display = 'none';
     if (userInfoSection) userInfoSection.style.display = 'none';
@@ -69,6 +105,10 @@ function setupUIElements() {
     // Clear any notifications
     if (notification) notification.style.display = 'none';
     if (errorMessage) errorMessage.style.display = 'none';
+    
+    // Disable project and file dropdowns initially
+    if (projectDropdown) projectDropdown.disabled = true;
+    if (fileDropdown) fileDropdown.disabled = true;
   } catch (error) {
     console.error("Error setting up UI elements:", error);
     // Don't call showError here to avoid infinite loop if error elements don't exist
@@ -118,7 +158,7 @@ function setupEventListeners() {
     // Generate script button
     const generateScriptButton = document.getElementById('generate-script');
     if (generateScriptButton) {
-      generateScriptButton.addEventListener('click', generateScript);
+      generateScriptButton.addEventListener('click', handleGenerateScript);
     } else {
       console.error("Generate script button not found");
     }
@@ -137,40 +177,333 @@ function setupEventListeners() {
 }
 
 /**
+ * Fetch projects from the API
+ */
+function fetchProjects() {
+  console.log("Fetching projects");
+  showNotification("Loading projects...");
+  
+  // Add a loading indicator to the project dropdown
+  const projectDropdown = document.getElementById('projectDropdown');
+  if (projectDropdown) {
+    projectDropdown.disabled = true;
+    const loadingOption = document.createElement('option');
+    loadingOption.textContent = 'Loading projects...';
+    loadingOption.value = '';
+    projectDropdown.innerHTML = '';
+    projectDropdown.appendChild(loadingOption);
+  }
+  
+  // Get token from background script with retry
+  getTokenWithRetry(3)
+    .then(token => {
+      console.log("Token retrieved successfully, fetching projects");
+      
+      // Make API request to fetch projects
+      const apiUrl = 'https://sqassh.netlify.app/api/projects';
+      console.log("Fetching from URL:", apiUrl);
+      
+      return fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    })
+    .then(response => {
+      console.log("API response status:", response.status);
+      
+      // Check if the response is OK
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Check the content type to ensure it's JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+      
+      return response.json().catch(error => {
+        console.error("Error parsing JSON:", error);
+        throw new Error("The API returned an invalid JSON response. Is the API server running correctly?");
+      });
+    })
+    .then(data => {
+      console.log("Projects data received:", data);
+      populateProjectDropdown(data);
+      showNotification("Projects loaded");
+    })
+    .catch(error => {
+      console.error("Error fetching projects:", error);
+      
+      let errorMessage = error.message;
+      
+      // Check if this is a network error (API server not running)
+      if (error.message.includes('Failed to fetch') || 
+          error.message.includes('NetworkError') ||
+          error.message.includes('Unexpected token')) {
+        errorMessage = "Could not connect to the API server. Please ensure the server is running at http://localhost:5173";
+      }
+      
+      showNotification("Error loading projects: " + errorMessage, true);
+      
+      // Reset project dropdown on error
+      if (projectDropdown) {
+        projectDropdown.disabled = false;
+        const errorOption = document.createElement('option');
+        errorOption.textContent = 'Error loading projects';
+        errorOption.value = '';
+        projectDropdown.innerHTML = '';
+        projectDropdown.appendChild(errorOption);
+      }
+    });
+}
+
+/**
+ * Get token with retry logic
+ * @param {number} maxRetries - Maximum number of retry attempts
+ * @returns {Promise<string>} - Promise that resolves with the token
+ */
+function getTokenWithRetry(maxRetries = 3) {
+  return new Promise((resolve, reject) => {
+    let retryCount = 0;
+    
+    function attemptGetToken() {
+      chrome.runtime.sendMessage({ action: "getToken" }, function(response) {
+        if (chrome.runtime.lastError) {
+          const error = chrome.runtime.lastError;
+          console.error("Error getting token:", error);
+          
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Retrying token retrieval (${retryCount}/${maxRetries})...`);
+            setTimeout(attemptGetToken, 500 * retryCount); // Exponential backoff
+          } else {
+            reject(new Error("Failed to get token after multiple attempts"));
+          }
+          return;
+        }
+        
+        console.log("Token response:", response ? "Response received" : "No response", 
+                    response && response.success ? "Success" : "Failed",
+                    response && response.token ? "Token exists" : "No token");
+        
+        if (!response || !response.success || !response.token) {
+          const errorMsg = response && response.error ? response.error : "No token available";
+          console.error(errorMsg);
+          
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Retrying token retrieval (${retryCount}/${maxRetries})...`);
+            setTimeout(attemptGetToken, 500 * retryCount); // Exponential backoff
+          } else {
+            reject(new Error(errorMsg));
+          }
+        } else {
+          resolve(response.token);
+        }
+      });
+    }
+    
+    attemptGetToken();
+  });
+}
+
+/**
+ * Populate the project dropdown with fetched projects
+ * @param {Array} projects - List of projects
+ */
+function populateProjectDropdown(projects) {
+  const projectDropdown = document.getElementById('projectDropdown');
+  if (!projectDropdown) return;
+  
+  // Clear existing options except the default one
+  while (projectDropdown.options.length > 1) {
+    projectDropdown.remove(1);
+  }
+  
+  // Add projects to dropdown
+  projects.forEach(project => {
+    const option = document.createElement('option');
+    option.value = project.id;
+    option.textContent = project.name;
+    projectDropdown.appendChild(option);
+  });
+  
+  // Enable dropdown
+  projectDropdown.disabled = false;
+}
+
+/**
+ * Handle project selection change
+ */
+function handleProjectChange() {
+  const projectDropdown = document.getElementById('projectDropdown');
+  const fileDropdown = document.getElementById('fileDropdown');
+  
+  if (!projectDropdown || !fileDropdown) return;
+  
+  const projectId = projectDropdown.value;
+  
+  // Reset file dropdown
+  while (fileDropdown.options.length > 1) {
+    fileDropdown.remove(1);
+  }
+  
+  // Disable file dropdown if no project selected
+  if (!projectId || projectId === "") {
+    fileDropdown.disabled = true;
+    return;
+  }
+  
+  // Fetch files for the selected project
+  fetchProjectFiles(projectId);
+}
+
+/**
+ * Fetch files for a project
+ * @param {string} projectId - The project ID
+ */
+function fetchProjectFiles(projectId) {
+  console.log("Fetching files for project:", projectId);
+  showNotification("Loading files...");
+  
+  // Get token from background script
+  chrome.runtime.sendMessage({ action: "getToken" }, function(response) {
+    if (chrome.runtime.lastError) {
+      console.error("Error getting token:", chrome.runtime.lastError);
+      showNotification("Error getting authentication token");
+      return;
+    }
+    
+    if (!response || !response.success || !response.token) {
+      console.error("No token available");
+      showNotification("Please log in to view files");
+      return;
+    }
+    
+    const token = response.token;
+    console.log("Token retrieved, fetching files");
+    
+    // Make API request to fetch project files
+    fetch(`https://sqassh.netlify.app/api/projects/${projectId}/files`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      populateFileDropdown(data);
+      showNotification("Files loaded");
+    })
+    .catch(error => {
+      console.error("Error fetching files:", error);
+      showNotification("Error loading files");
+    });
+  });
+}
+
+/**
+ * Populate the file dropdown with fetched files
+ * @param {Array} files - List of files
+ */
+function populateFileDropdown(files) {
+  const fileDropdown = document.getElementById('fileDropdown');
+  if (!fileDropdown) return;
+  
+  // Clear existing options except the default one
+  while (fileDropdown.options.length > 1) {
+    fileDropdown.remove(1);
+  }
+  
+  // Add files to dropdown
+  files.forEach(file => {
+    const option = document.createElement('option');
+    option.value = file.id;
+    option.textContent = file.name;
+    fileDropdown.appendChild(option);
+  });
+  
+  // Enable dropdown
+  fileDropdown.disabled = false;
+}
+
+/**
  * Check authentication status
  */
 function checkAuthStatus() {
   console.log("Checking authentication status");
   
-  try {
-    chrome.runtime.sendMessage({ action: "checkAuth" }, function(response) {
-      if (chrome.runtime.lastError) {
-        console.error("Error checking auth status:", chrome.runtime.lastError);
-        showError("Failed to check authentication status");
-        updateUIForUnauthenticated();
-        return;
-      }
+  getTokenWithRetry(2)
+    .then(token => {
+      console.log("User is authenticated");
+      updateUIForAuthenticated();
       
-      console.log("Auth status response:", response);
-      
-      if (response && response.isAuthenticated) {
-        updateUIForAuthenticated(response);
-      } else {
-        updateUIForUnauthenticated();
+      // Enable project selection
+      const projectDropdown = document.getElementById('projectDropdown');
+      if (projectDropdown) {
+        fetchProjects();
       }
+    })
+    .catch(error => {
+      console.log("User is not authenticated:", error.message);
+      updateUIForUnauthenticated();
     });
-  } catch (error) {
-    console.error("Error in checkAuthStatus:", error);
-    showError("Failed to check authentication");
-    updateUIForUnauthenticated();
-  }
+}
+
+/**
+ * Navigate to login page
+ */
+function navigateToLogin() {
+  console.log("Navigating to login page");
+  
+  // Open the login page in a new tab
+  chrome.tabs.create({ url: 'https://sqassh.netlify.app/login' });
+  
+  // Show notification
+  showNotification("Login page opened in a new tab");
+}
+
+/**
+ * Handle logout
+ */
+function handleLogout() {
+  console.log("Logging out");
+  
+  // Clear token from storage
+  chrome.storage.local.remove(['authToken', 'userInfo'], function() {
+    if (chrome.runtime.lastError) {
+      console.error("Error removing token:", chrome.runtime.lastError);
+      showError("Failed to log out");
+      return;
+    }
+    
+    // Notify background script
+    chrome.runtime.sendMessage({ action: "tokenRemoved" }, function(response) {
+      if (chrome.runtime.lastError) {
+        console.error("Error notifying background script:", chrome.runtime.lastError);
+      }
+      
+      // Update UI
+      updateUIForUnauthenticated();
+      showNotification("Logged out successfully");
+    });
+  });
 }
 
 /**
  * Update UI for authenticated user
- * @param {object} response - The authentication response
  */
-function updateUIForAuthenticated(response) {
+function updateUIForAuthenticated() {
   console.log("Updating UI for authenticated user");
   
   try {
@@ -182,14 +515,6 @@ function updateUIForAuthenticated(response) {
     if (authSection) authSection.style.display = 'none';
     if (recordingSection) recordingSection.style.display = 'block';
     if (userInfoSection) userInfoSection.style.display = 'block';
-    
-    // Try to decode the token to get user info
-    if (response.token) {
-      updateUserInfoFromToken(response.token);
-    } else if (response.userData) {
-      // If token couldn't be decoded but userData is provided, use that
-      updateUserInfo(response.userData);
-    }
     
     // Check recording status
     checkRecordingStatus();
@@ -217,52 +542,6 @@ function updateUIForUnauthenticated() {
   } catch (error) {
     console.error("Error updating UI for unauthenticated user:", error);
     showError("Failed to update UI");
-  }
-}
-
-/**
- * Navigate to login page
- */
-function navigateToLogin() {
-  try {
-    chrome.tabs.create({url: "http://localhost:5174/login"}, function(tab) {
-      if (chrome.runtime.lastError) {
-        console.error("Error opening login page:", chrome.runtime.lastError);
-        showNotification("Error opening login page");
-      }
-    });
-  } catch (error) {
-    console.error("Error navigating to login:", error);
-    showError("Failed to open login page");
-  }
-}
-
-/**
- * Handle logout
- */
-function handleLogout() {
-  console.log("Handling logout");
-  
-  try {
-    chrome.runtime.sendMessage({ action: "logout" }, function(response) {
-      if (chrome.runtime.lastError) {
-        console.error("Error logging out:", chrome.runtime.lastError);
-        showError("Failed to log out");
-        return;
-      }
-      
-      console.log("Logout response:", response);
-      
-      if (response && response.success) {
-        updateUIForUnauthenticated();
-        showNotification("Logged out successfully");
-      } else {
-        showError("Failed to log out");
-      }
-    });
-  } catch (error) {
-    console.error("Error in handleLogout:", error);
-    showError("Failed to log out");
   }
 }
 
@@ -417,10 +696,9 @@ function stopRecording() {
   
   try {
     // Disable the stop button and show loading state
-    const startRecordingButton = document.getElementById('start-recording-button');
-    const stopRecordingButton = document.getElementById('stop-recording-button');
+    const stopButton = document.getElementById('stop-recording-button');
     
-    if (stopRecordingButton) stopRecordingButton.disabled = true;
+    if (stopButton) stopButton.disabled = true;
     
     showNotification("Stopping recording...");
     
@@ -430,7 +708,7 @@ function stopRecording() {
         showError("Failed to stop recording: " + chrome.runtime.lastError.message);
         
         // Re-enable stop button
-        if (stopRecordingButton) stopRecordingButton.disabled = false;
+        if (stopButton) stopButton.disabled = false;
         return;
       }
       
@@ -444,13 +722,14 @@ function stopRecording() {
         showNotification(`Recording stopped. ${actions.length} actions recorded.`);
         
         // Re-enable start button
-        if (startRecordingButton) startRecordingButton.disabled = false;
+        const startButton = document.getElementById('start-recording-button');
+        if (startButton) startButton.disabled = false;
       } else {
         const errorMsg = response && response.error ? response.error : "Unknown error";
         showError("Failed to stop recording: " + errorMsg);
         
         // Re-enable stop button
-        if (stopRecordingButton) stopRecordingButton.disabled = false;
+        if (stopButton) stopButton.disabled = false;
       }
     });
   } catch (error) {
@@ -458,43 +737,108 @@ function stopRecording() {
     showError("Failed to stop recording: " + error.message);
     
     // Re-enable stop button
-    const stopRecordingButton = document.getElementById('stop-recording-button');
-    if (stopRecordingButton) stopRecordingButton.disabled = false;
+    const stopButton = document.getElementById('stop-recording-button');
+    if (stopButton) stopButton.disabled = false;
   }
 }
 
 /**
- * Generate script from recorded actions
+ * Handle generate script button click
  */
-function generateScript() {
+function handleGenerateScript() {
   console.log("Generating script");
   
-  try {
-    chrome.runtime.sendMessage({ action: "getRecordedActions" }, function(response) {
-      if (chrome.runtime.lastError) {
-        console.error("Error getting recorded actions:", chrome.runtime.lastError);
-        showError("Failed to generate script");
-        return;
+  const projectDropdown = document.getElementById('projectDropdown');
+  const fileDropdown = document.getElementById('fileDropdown');
+  
+  // Check if project and file are selected
+  if (!projectDropdown.value || projectDropdown.value === "" || 
+      !fileDropdown.value || fileDropdown.value === "") {
+    showNotification("Please select a project and file");
+    return;
+  }
+  
+  // Get selected project and file IDs
+  const projectId = projectDropdown.value;
+  const fileId = fileDropdown.value;
+  
+  // Send message to background script to generate the script
+  chrome.runtime.sendMessage({ 
+    action: "generateScript",
+    projectId: projectId,
+    fileId: fileId
+  }, function(response) {
+    if (chrome.runtime.lastError) {
+      console.error("Error generating script:", chrome.runtime.lastError);
+      showNotification("Error generating script");
+      return;
+    }
+    
+    if (response.success) {
+      // Display the generated script
+      const scriptOutput = document.getElementById('scriptOutput');
+      if (scriptOutput) {
+        scriptOutput.value = response.script;
+        scriptOutput.style.display = 'block';
       }
       
-      if (response && response.success) {
-        if (response.recordedActions && response.recordedActions.length > 0) {
-          // For now, just show a notification
-          showNotification(`Generated script with ${response.recordedActions.length} actions`);
-          
-          // In a real implementation, we would generate and download the script
-          // or show it in a modal
-        } else {
-          showNotification("No actions recorded yet");
-        }
-      } else {
-        showError("Failed to generate script");
+      // Enable save to project button
+      const saveToProjectButton = document.getElementById('save-to-project');
+      if (saveToProjectButton) {
+        saveToProjectButton.disabled = false;
       }
-    });
-  } catch (error) {
-    console.error("Error in generateScript:", error);
-    showError("Failed to generate script");
+      
+      showNotification("Script generated successfully");
+    } else {
+      console.error("Error generating script:", response.error);
+      showNotification("Error generating script: " + response.error);
+    }
+  });
+}
+
+/**
+ * Handle save script to project file
+ */
+function handleSaveScriptToProject() {
+  console.log("Saving script to project file");
+  
+  const projectDropdown = document.getElementById('projectDropdown');
+  const fileDropdown = document.getElementById('fileDropdown');
+  const scriptOutput = document.getElementById('scriptOutput');
+  
+  // Check if project and file are selected
+  if (!projectDropdown.value || projectDropdown.value === "" || 
+      !fileDropdown.value || fileDropdown.value === "" ||
+      !scriptOutput.value) {
+    showNotification("Please select a project and file, and generate a script");
+    return;
   }
+  
+  // Get selected project and file IDs
+  const projectId = projectDropdown.value;
+  const fileId = fileDropdown.value;
+  const scriptContent = scriptOutput.value;
+  
+  // Send message to background script to save the script
+  chrome.runtime.sendMessage({ 
+    action: "saveScriptToProject",
+    projectId: projectId,
+    fileId: fileId,
+    scriptContent: scriptContent
+  }, function(response) {
+    if (chrome.runtime.lastError) {
+      console.error("Error saving script:", chrome.runtime.lastError);
+      showNotification("Error saving script");
+      return;
+    }
+    
+    if (response.success) {
+      showNotification("Script saved to project file");
+    } else {
+      console.error("Error saving script:", response.error);
+      showNotification("Error saving script: " + response.error);
+    }
+  });
 }
 
 /**
@@ -534,32 +878,6 @@ function clearRecording() {
   } catch (error) {
     console.error("Error in clearRecording:", error);
     showError("Error clearing recording: " + error.message);
-  }
-}
-
-/**
- * Update user info from token
- * @param {string} token - The token
- */
-function updateUserInfoFromToken(token) {
-  try {
-    // Our token is a base64-encoded JSON string, not a JWT
-    const payload = JSON.parse(atob(token));
-    
-    // Update user info
-    updateUserInfo({
-      email: payload.email || "Unknown",
-      role: payload.role || "User"
-    });
-    
-    return true;
-  } catch (error) {
-    console.error("Error decoding token:", error);
-    updateUserInfo({
-      email: "Error decoding token",
-      role: "Unknown"
-    });
-    return false;
   }
 }
 
@@ -735,43 +1053,27 @@ function clearLiveActionPanel() {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   console.log("Popup received message:", request.action);
   
-  if (request.action === "authStateChanged") {
-    console.log("Auth state changed:", request.isAuthenticated);
-    
-    // Update UI based on new auth state
-    isAuthenticated = request.isAuthenticated;
-    updateUIForAuthState(isAuthenticated);
-    
-    if (isAuthenticated && request.userData) {
-      updateUserInfo(request.userData);
-    }
-    
-    sendResponse({ success: true });
-  } else if (request.action === "recordingStateChanged") {
-    console.log("Recording state changed:", request.isRecording);
-    
-    // Update UI based on new recording state
-    isRecording = request.isRecording;
-    updateRecordingUI(isRecording, request.recordedActions || []);
-    
-    sendResponse({ success: true });
-  } else if (request.action === "actionRecorded") {
-    console.log("New action recorded:", request.action);
-    
-    // Update action count
-    const actionCountElement = document.getElementById('action-count');
-    if (actionCountElement && request.actionCount) {
-      actionCountElement.textContent = request.actionCount;
-    }
-    
-    // Update live action panel with the new action
-    if (request.lastAction) {
-      updateLiveActionPanel(request.lastAction);
-    }
-    
-    sendResponse({ success: true });
+  switch (request.action) {
+    case "recordingStateChanged":
+      console.log("Recording state changed:", request.isRecording);
+      updateRecordingUI(request.isRecording, request.recordedActions || []);
+      break;
+      
+    case "actionRecorded":
+      console.log("Action recorded:", request.action);
+      updateLiveActionPanel(request.action);
+      break;
+      
+    case "authStateChanged":
+      console.log("Auth state changed:", request.isAuthenticated);
+      if (request.isAuthenticated) {
+        updateUIForAuthenticated();
+        fetchProjects();
+      } else {
+        updateUIForUnauthenticated();
+      }
+      break;
   }
   
-  // Return true to indicate we'll respond asynchronously
-  return true;
+  return true; // Keep the message channel open for async response
 });
